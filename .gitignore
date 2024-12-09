@@ -1,1 +1,11 @@
-/node_modules
+npm-debug.log
+node_modules/
+dist/
+*.vsix
+
+# JUNIT testresult
+test-results.xml
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov

@@ -1,0 +1,29 @@
+{
+    "contributions": [
+        {
+            "id": "TestExtensonComponent",
+            "type": "ms.vss-work-web.work-item-form-control",
+            "targets": [
+                "ms.vss-work-web.work-item-form"
+            ],
+            "properties": {
+                "name": "cusom control",
+                "uri": "dist/TestExtensonComponent/TestExtensonComponent.html",
+                "inputs": [
+                    {
+                        "id": "SampleInput",
+                        "name": "sample input",
+                        "description": "sample input",
+                        "validation": {
+                            "dataType": "String",
+                            "isRequired": true
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "scopes": [
+        "vso.work"
+    ]
+}
