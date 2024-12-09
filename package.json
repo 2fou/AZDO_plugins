@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "azure-devops-extension-api": "^4.246.0",
+    "azure-devops-extension-sdk": "^4.0.2"
+  },
+  "name": "custom-ctrl01",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

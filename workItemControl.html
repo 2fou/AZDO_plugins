@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Livrable Control</title>
+    <style>
+        label {
+            display: block;
+            margin: 8px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <form id="livrableForm">
+        <label>
+            <input type="checkbox" id="question1" /> Le projet implique-t-il un niveau de sécurité élevé?
+        </label>
+        <label>
+            <input type="checkbox" id="question2" /> Est-ce que le projet nécessite une validation légale?
+        </label>
+        <div id="commonDeliverable" style="display: none;">
+            <label>Plan de sécurité (lien):
+                <input type="url" id="securityPlanUrl" placeholder="http://link-to-security-plan.com" />
+            </label>
+        </div>
+        <div id="additionalDeliverable" style="display: none;">
+            <label>Validation légale (lien):
+                <input type="url" id="legalValidationUrl" placeholder="http://link-to-legal-validation.com" />
+            </label>
+        </div>
+        <button type="button" id="saveButton">Enregistrer</button>
+    </form>
+
+    <script type="module" src="./scripts/main.js"></script>
+</body>
+
+</html>

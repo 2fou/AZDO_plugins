@@ -1,0 +1,64 @@
+{
+    "manifestVersion": 1,
+    "id": "feature-livrable-extension",
+    "publisher": "AgileCoachingSolutionsFeatureAddon",
+    "version": "1.0.22",
+    "name": "Feature Livrable Control",
+    "description": "Controle pour les features avec livrables",
+    "public": false,
+    "categories": [
+        "Azure Boards"
+    ],
+    "targets": [
+        {
+            "id": "Microsoft.VisualStudio.Services"
+        }
+    ],
+    "contributions": [
+        {
+            "id": "livrable-control",
+            "type": "ms.vss-work-web.work-item-form-control",
+            "targets": [
+                "ms.vss-work-web.work-item-form"
+            ],
+            "properties": {
+                "name": "Livrable Control",
+                "uri": "workItemControl.html",
+                "height": 300
+            }
+        }
+    ],
+    "scopes": [
+        "vso.work"
+    ],
+    "inputs": [
+        {
+            "id": "questionnaireConfig",
+            "description": "Configuration du questionnaire",
+            "type": "string",
+            "properties": {
+                "isMultiline": true
+            }
+        }
+    ],
+    "files": [
+        {
+            "path": "workItemControl.html",
+            "addressable": true
+        },
+        {
+            "path": "node_modules/azure-devops-extension-sdk",
+            "addressable": true,
+            "packagePath": "lib"
+        },
+        {
+            "path": "node_modules/azure-devops-extension-api",
+            "addressable": false,
+            "packagePath": "lib"
+        },
+        {
+            "path": "scripts/main.js",
+            "addressable": true
+        }
+    ]
+}
