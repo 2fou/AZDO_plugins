@@ -1,11 +1,9 @@
-import React from "react";
-import { createRoot } from "react-dom/client";
+import "azure-devops-ui/Core/override.css";
+import "es6-promise/auto";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
 import "./Common.scss";
 
 export function showRootComponent(component: React.ReactElement<any>) {
-  const rootElement = document.getElementById("root");
-  if (rootElement) {
-    const root = createRoot(rootElement);
-    root.render(component);
-  }
+    ReactDOM.render(component, document.getElementById("root"));
 }

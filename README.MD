@@ -12,3 +12,4 @@
     }
   ]
 }
+tfx extension publish --manifest-globs azure-devops-extension.json --overrides-file configs/dev.json --token [token]

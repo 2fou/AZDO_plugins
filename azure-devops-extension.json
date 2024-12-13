@@ -2,7 +2,7 @@
     "manifestVersion": 1,
     "id": "feature-livrable-extension",
     "publisher": "AgileCoachingSolutionsFeatureAddon",
-    "version": "1.0.22",
+
     "name": "Feature Livrable Control",
     "description": "Controle pour les features avec livrables",
     "public": false,
@@ -22,32 +22,8 @@
             "path": "README.md"
         }
     },
-    "contributions": [
-        {
-            "id": "livrable-control",
-            "type": "ms.vss-work-web.work-item-form-control",
-            "targets": [
-                "ms.vss-work-web.work-item-form"
-            ],
-            "properties": {
-                "name": "Livrable Control",
-                "uri": "workItemControl.html",
-                "height": 300
-            }
-        }
-    ],
     "scopes": [
         "vso.work"
-    ],
-    "inputs": [
-        {
-            "id": "questionnaireConfig",
-            "description": "Configuration du questionnaire",
-            "type": "string",
-            "properties": {
-                "isMultiline": true
-            }
-        }
     ],
     "files": [
         {

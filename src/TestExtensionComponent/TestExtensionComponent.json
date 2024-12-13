@@ -1,0 +1,17 @@
+{
+    "version": "1.0.29",
+    "contributions": [
+        {
+            "id": "livrable-control",
+            "type": "ms.vss-work-web.work-item-form-control",
+            "targets": [
+                "ms.vss-work-web.work-item-form"
+            ],
+            "properties": {
+                "name": "Livrable Control",
+                "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
+                "height": 300
+            }
+        }
+    ]
+}

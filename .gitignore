@@ -9,3 +9,5 @@ test-results.xml
 # Coverage directory used by tools like istanbul
 coverage
 *.lcov
+
+*.how

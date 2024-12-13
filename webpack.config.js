@@ -1,21 +1,19 @@
 const path = require("path");
 const fs = require("fs");
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+
+// Webpack entry points. Mapping from resulting bundle name to the source file entry.
 const entries = {};
-const ComponentsDir = path.join(__dirname, "src/Components");
-fs.readdirSync(ComponentsDir).filter(dir => {
-    if (fs.statSync(path.join(ComponentsDir, dir)).isDirectory()) {
-        entries[dir] = "./" + path.relative(process.cwd(), path.join(ComponentsDir, dir, dir));
+
+// Loop through subfolders in the "src" folder and add an entry for each one
+const srcDir = path.join(__dirname, "src");
+fs.readdirSync(srcDir).filter(dir => {
+    if (fs.statSync(path.join(srcDir, dir)).isDirectory()) {
+        entries[dir] = "./" + path.relative(process.cwd(), path.join(srcDir, dir, dir));
     }
 });
-module.exports = {
 
-    devtool: "inline-source-map",
-    devServer: {
-      https: true,
-      port: 3000,
-    },
-
+module.exports = (env, argv) => ({
     entry: entries,
     output: {
         filename: "[name]/[name].js"
@@ -36,28 +34,37 @@ module.exports = {
                 loader: "ts-loader"
             },
             {
-                test: /\.s[ac]ss?$/,
-                use: ["style-loader", "css-loader", "azure-devops-ui/buildScripts/css-variables-loader", "sass-loader"]
+                test: /\.scss$/,
+                use: ["style-loader", "css-loader", "sass-loader"],
             },
             {
-                test: /\.css?$/,
+                test: /\.css$/,
                 use: ["style-loader", "css-loader"],
             },
             {
-                test: /\.woff?$/,
+                test: /\.(woff|woff2|eot|ttf|otf)$/,
                 type: 'asset/inline'
             },
             {
-                test: /\.html?$/,
-                loader: "file-loader"
+                test: /\.html$/,
+                type: 'asset/resource'
             }
         ]
     },
     plugins: [
         new CopyWebpackPlugin({
             patterns: [
-                { from: "**/*.html", context: "src/Components" }
+                { from: "**/*.html", context: "src" }
             ]
         })
-    ]
-}
+    ],
+    ...(env.WEBPACK_SERVE
+        ? {
+            devtool: 'inline-source-map',
+            devServer: {
+                server: 'https',
+                port: 3000
+            }
+        }
+        : {})
+});
