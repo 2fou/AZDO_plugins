@@ -29,12 +29,16 @@ const QuestionnaireForm: React.FC = () => {
 
     useEffect(() => {
         const initializeSDK = async () => {
+            console.log("Initializing SDK...");
             await SDK.init();
             const service = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
             const value = await service.getFieldValue('Custom.Questionnaire', { returnOriginalValue: false });
-            
+            console.log("Fetched value:", value);
             if (typeof value === 'string') {
                 setQuestionnaire(JSON.parse(value));
+                console.log("Questionnaire set:", value);
+            } else {
+                console.log("Invalid value type for questionnaire");
             }
         };
 
@@ -42,6 +46,7 @@ const QuestionnaireForm: React.FC = () => {
     }, []);
 
     const handleAnswerChange = (questionId: string, checked: boolean) => {
+        console.log(`Answer change: Question ID = ${questionId}, Checked = ${checked}`);        
         setAnswers(prev => ({
             ...prev,
             [questionId]: { ...prev[questionId], answer: checked }
@@ -56,6 +61,7 @@ const QuestionnaireForm: React.FC = () => {
     };
 
     const saveAnswers = async () => {
+        console.log("Saving answers:", answers);
         const service = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
         await service.setFieldValue('Custom.QuestionnaireAnswers', JSON.stringify(answers));
     };

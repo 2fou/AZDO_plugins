@@ -1,5 +1,19 @@
 {
-    "id": "feature-livrable-extension",
-    "public": false,
-    "baseUri": "https://localhost:3000"
-  }
+  "id": "feature-livrable-extension",
+  "public": false,
+  "version": "1.0.30",
+  "contributions": [
+    {
+      "id": "livrable-control",
+      "type": "ms.vss-work-web.work-item-form-control",
+      "targets": [
+        "ms.vss-work-web.work-item-form"
+      ],
+      "properties": {
+        "name": "Livrable Control",
+        "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
+        "height": 300
+      }
+    }
+  ]
+}
