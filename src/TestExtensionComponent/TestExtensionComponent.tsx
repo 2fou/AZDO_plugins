@@ -5,6 +5,7 @@ import { Button } from 'azure-devops-ui/Button';
 import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from "azure-devops-extension-api/WorkItemTracking";
+import { showRootComponent } from "../Common/Common";
 
 interface Question {
     id: string;
@@ -16,11 +17,13 @@ interface QuestionnaireData {
     questions: Question[];
 }
 
+interface AnswerDetail {
+    answer: boolean;
+    link: string;
+}
+
 interface Answers {
-    [key: string]: {
-        answer: boolean;
-        link: string;
-    };
+    [key: string]: AnswerDetail;
 }
 
 const QuestionnaireForm: React.FC = () => {
@@ -31,14 +34,23 @@ const QuestionnaireForm: React.FC = () => {
         const initializeSDK = async () => {
             console.log("Initializing SDK...");
             await SDK.init();
+            SDK.register("livrable-control", () => ({}));
             const service = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-            const value = await service.getFieldValue('Custom.Questionnaire', { returnOriginalValue: false });
-            console.log("Fetched value:", value);
-            if (typeof value === 'string') {
-                setQuestionnaire(JSON.parse(value));
-                console.log("Questionnaire set:", value);
+
+            const questionnaireValue = await service.getFieldValue('Custom.Custom_Questionnaire', { returnOriginalValue: false });
+            if (typeof questionnaireValue === 'string') {
+                setQuestionnaire(JSON.parse(questionnaireValue));
+                console.log("Questionnaire set:", questionnaireValue);
             } else {
-                console.log("Invalid value type for questionnaire");
+                console.error("Invalid value type for questionnaire:", typeof questionnaireValue);
+            }
+
+            const answersValue = await service.getFieldValue('Custom.Custom_QuestionnaireAnswers', { returnOriginalValue: false });
+            if (typeof answersValue === 'string') {
+                setAnswers(JSON.parse(answersValue));
+                console.log("Answers set:", answersValue);
+            } else {
+                console.error("Invalid value type for questionnaire answers:", typeof answersValue);
             }
         };
 
@@ -46,24 +58,27 @@ const QuestionnaireForm: React.FC = () => {
     }, []);
 
     const handleAnswerChange = (questionId: string, checked: boolean) => {
-        console.log(`Answer change: Question ID = ${questionId}, Checked = ${checked}`);        
         setAnswers(prev => ({
             ...prev,
-            [questionId]: { ...prev[questionId], answer: checked }
+            [questionId]: {
+                answer: checked,
+                link: checked ? prev[questionId]?.link : ''  // Clear link if unchecked
+            }
         }));
     };
+    
 
     const handleLinkChange = (questionId: string, link: string) => {
         setAnswers(prev => ({
             ...prev,
-            [questionId]: { ...prev[questionId], link }
+            [questionId]: { ...prev[questionId], link } as AnswerDetail
         }));
     };
 
     const saveAnswers = async () => {
-        console.log("Saving answers:", answers);
         const service = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-        await service.setFieldValue('Custom.QuestionnaireAnswers', JSON.stringify(answers));
+        await service.setFieldValue('Custom.Custom_QuestionnaireAnswers', JSON.stringify(answers));
+        console.log("Saving answers:", answers);
     };
 
     if (!questionnaire) return <div>Loading...</div>;
@@ -91,4 +106,4 @@ const QuestionnaireForm: React.FC = () => {
     );
 };
 
-export default QuestionnaireForm;
+showRootComponent(<QuestionnaireForm />);

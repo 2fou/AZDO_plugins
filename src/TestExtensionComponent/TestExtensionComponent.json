@@ -10,7 +10,23 @@
             "properties": {
                 "name": "Livrable Control",
                 "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
-                "height": 300
+                "height": 300,
+                "inputs": [
+                    {
+                        "id": "FieldName",
+                        "description": "The field associated with the control.",
+                        "type": "WorkItemField",
+                        "properties": {
+                            "workItemFieldTypes": [
+                                "String"
+                            ]
+                        },
+                        "validation": {
+                            "dataType": "String",
+                            "isRequired": true
+                        }
+                    }
+                ]
             }
         }
     ]
