@@ -10,23 +10,19 @@
             "properties": {
                 "name": "Livrable Control",
                 "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
-                "height": 300,
-                "inputs": [
-                    {
-                        "id": "FieldName",
-                        "description": "The field associated with the control.",
-                        "type": "WorkItemField",
-                        "properties": {
-                            "workItemFieldTypes": [
-                                "String"
-                            ]
-                        },
-                        "validation": {
-                            "dataType": "String",
-                            "isRequired": true
-                        }
-                    }
-                ]
+                "height": 300
+            }
+        },
+        {
+            "id": "configuration",
+            "type": "ms.vss-web.hub",
+            "targets": [
+                "ms.vss-web.project-admin-hub-group"
+            ],
+            "properties": {
+                "name": "Questionnaire Configuration",
+                "order": 99,
+                "uri": "dist/TestConfiguration/TestConfiguration.html"
             }
         }
     ]

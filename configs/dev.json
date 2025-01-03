@@ -1,7 +1,7 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.44",
+  "version": "1.0.79",
   "contributions": [
     {
       "id": "livrable-control",
@@ -13,6 +13,18 @@
         "name": "Livrable Control",
         "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
         "height": 300
+      }
+    },
+    {
+      "id": "configuration",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-web.project-admin-hub-group"
+      ],
+      "properties": {
+        "name": "Questionnaire Configuration",
+        "order": 99,
+        "uri": "dist/TestConfiguration/TestConfiguration.html"
       }
     }
   ]

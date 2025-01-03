@@ -4,106 +4,134 @@ import * as SDK from 'azure-devops-extension-sdk';
 import { Button } from 'azure-devops-ui/Button';
 import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
+import { IExtensionDataService, CommonServiceIds } from "azure-devops-extension-api";
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from "azure-devops-extension-api/WorkItemTracking";
-import { showRootComponent } from "../Common/Common";
+import { showRootComponent } from '../Common/Common';
 
 interface Question {
-    id: string;
-    text: string;
-    type: string;
-}
-
-interface QuestionnaireData {
-    questions: Question[];
+  id: string;
+  text: string;
 }
 
 interface AnswerDetail {
-    answer: boolean;
-    link: string;
+  answer: boolean;
+  link: string;
 }
 
 interface Answers {
-    [key: string]: AnswerDetail;
+  [workItemId: string]: {
+    [questionId: string]: AnswerDetail;
+  };
 }
 
 const QuestionnaireForm: React.FC = () => {
-    const [questionnaire, setQuestionnaire] = useState<QuestionnaireData | null>(null);
-    const [answers, setAnswers] = useState<Answers>({});
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail }>({});
+  const [currentWorkItemId, setCurrentWorkItemId] = useState<string | null>(null);
 
-    useEffect(() => {
-        const initializeSDK = async () => {
-            console.log("Initializing SDK...");
-            await SDK.init();
-            SDK.register("livrable-control", () => ({}));
-            const service = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
+  useEffect(() => {
+    const initializeSDK = async () => {
+      console.log("Initializing SDK...");
+      await SDK.init();
 
-            const questionnaireValue = await service.getFieldValue('Custom.Custom_Questionnaire', { returnOriginalValue: false });
-            if (typeof questionnaireValue === 'string') {
-                setQuestionnaire(JSON.parse(questionnaireValue));
-                console.log("Questionnaire set:", questionnaireValue);
-            } else {
-                console.error("Invalid value type for questionnaire:", typeof questionnaireValue);
-            }
+      try {
+        const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
+        
+        // Get the current work item ID
+        const workItemId = await workItemFormService.getId();
+        setCurrentWorkItemId(workItemId.toString());
 
-            const answersValue = await service.getFieldValue('Custom.Custom_QuestionnaireAnswers', { returnOriginalValue: false });
-            if (typeof answersValue === 'string') {
-                setAnswers(JSON.parse(answersValue));
-                console.log("Answers set:", answersValue);
-            } else {
-                console.error("Invalid value type for questionnaire answers:", typeof answersValue);
-            }
-        };
-
-        initializeSDK();
-    }, []);
-
-    const handleAnswerChange = (questionId: string, checked: boolean) => {
-        setAnswers(prev => ({
-            ...prev,
-            [questionId]: {
-                answer: checked,
-                link: checked ? prev[questionId]?.link : ''  // Clear link if unchecked
-            }
-        }));
-    };
-    
-
-    const handleLinkChange = (questionId: string, link: string) => {
-        setAnswers(prev => ({
-            ...prev,
-            [questionId]: { ...prev[questionId], link } as AnswerDetail
-        }));
+        const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+        const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+        
+        // Load questions
+        const loadedQuestions = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
+        console.log("Loaded Questions:", loadedQuestions);
+        setQuestions(loadedQuestions);
+      } catch (error) {
+        console.error("SDK Initialization Error: ", error);
+      }
     };
 
-    const saveAnswers = async () => {
-        const service = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-        await service.setFieldValue('Custom.Custom_QuestionnaireAnswers', JSON.stringify(answers));
-        console.log("Saving answers:", answers);
+    initializeSDK();
+  }, []);
+
+  useEffect(() => {
+    const loadAnswers = async () => {
+      if (currentWorkItemId) {
+        try {
+          const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+          const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+          const storedAnswers = await dataManager.getValue<Answers>('answers', { scopeType: 'Default' });
+          setAnswers(storedAnswers ? storedAnswers[currentWorkItemId] || {} : {});
+        } catch (error) {
+          console.error("Error loading answers:", error);
+        }
+      }
     };
 
-    if (!questionnaire) return <div>Loading...</div>;
+    loadAnswers();
+  }, [currentWorkItemId]);
 
-    return (
-        <div>
-            {questionnaire.questions.map((question) => (
-                <div key={question.id}>
-                    <Checkbox
-                        label={question.text}
-                        checked={answers[question.id]?.answer || false}
-                        onChange={(e, checked) => handleAnswerChange(question.id, checked)}
-                    />
-                    {answers[question.id]?.answer && (
-                        <TextField
-                            value={answers[question.id]?.link || ''}
-                            onChange={(e, newValue) => handleLinkChange(question.id, newValue || '')}
-                            placeholder="Enter link (file server or https)"
-                        />
-                    )}
-                </div>
-            ))}
-            <Button text="Save Answers" onClick={saveAnswers} />
-        </div>
-    );
+  const handleAnswerChange = (questionId: string, checked: boolean) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: {
+        answer: checked,
+        link: checked ? (prev[questionId]?.link || '') : ''
+      }
+    }));
+  };
+
+  const handleLinkChange = (questionId: string, link: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: { ...prev[questionId], link }
+    }));
+  };
+
+  const saveAnswers = async () => {
+    try {
+      const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+      const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+
+      if (currentWorkItemId) {
+        const storedAnswers = await dataManager.getValue<Answers>('answers', { scopeType: 'Default' }) || {};
+
+        storedAnswers[currentWorkItemId] = answers;
+        await dataManager.setValue('answers', storedAnswers, { scopeType: 'Default' });
+        alert("Answers saved successfully!");
+      }
+    } catch (error) {
+      console.error("Error saving answers:", error);
+    }
+  };
+
+  return (
+    <div>
+      {questions.length > 0 ? (
+        questions.map((question) => (
+          <div key={question.id}>
+            <Checkbox
+              label={question.text}
+              checked={answers[question.id]?.answer || false}
+              onChange={(e, checked) => handleAnswerChange(question.id, checked)}
+            />
+            {answers[question.id]?.answer && (
+              <TextField
+                value={answers[question.id]?.link || ''}
+                onChange={(e, newValue) => handleLinkChange(question.id, newValue || '')}
+                placeholder="Enter link (file server or https)"
+              />
+            )}
+          </div>
+        ))
+      ) : (
+        <div>No questions available.</div>
+      )}
+      <Button text="Save Answers" onClick={saveAnswers} />
+    </div>
+  );
 };
 
 showRootComponent(<QuestionnaireForm />);
