@@ -18,12 +18,6 @@ interface AnswerDetail {
   link: string;
 }
 
-interface Answers {
-  [workItemId: string]: {
-    [questionId: string]: AnswerDetail;
-  };
-}
-
 const QuestionnaireForm: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail }>({});
@@ -36,18 +30,24 @@ const QuestionnaireForm: React.FC = () => {
 
       try {
         const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-        
+
         // Get the current work item ID
         const workItemId = await workItemFormService.getId();
         setCurrentWorkItemId(workItemId.toString());
 
         const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
         const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
-        
+
         // Load questions
         const loadedQuestions = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
         console.log("Loaded Questions:", loadedQuestions);
         setQuestions(loadedQuestions);
+
+        // Load existing answers from the work item field
+        const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField') as string;
+        if (fieldValue) {
+          setAnswers(JSON.parse(fieldValue));
+        }
       } catch (error) {
         console.error("SDK Initialization Error: ", error);
       }
@@ -55,23 +55,6 @@ const QuestionnaireForm: React.FC = () => {
 
     initializeSDK();
   }, []);
-
-  useEffect(() => {
-    const loadAnswers = async () => {
-      if (currentWorkItemId) {
-        try {
-          const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
-          const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
-          const storedAnswers = await dataManager.getValue<Answers>('answers', { scopeType: 'Default' });
-          setAnswers(storedAnswers ? storedAnswers[currentWorkItemId] || {} : {});
-        } catch (error) {
-          console.error("Error loading answers:", error);
-        }
-      }
-    };
-
-    loadAnswers();
-  }, [currentWorkItemId]);
 
   const handleAnswerChange = (questionId: string, checked: boolean) => {
     setAnswers(prev => ({
@@ -90,20 +73,20 @@ const QuestionnaireForm: React.FC = () => {
     }));
   };
 
-  const saveAnswers = async () => {
+  const saveAnswersToWorkItemField = async () => {
+    if (!currentWorkItemId) return;
+
     try {
-      const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
-      const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+      const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
 
-      if (currentWorkItemId) {
-        const storedAnswers = await dataManager.getValue<Answers>('answers', { scopeType: 'Default' }) || {};
+      // Serialize your answers object to a JSON string or any preferred format
+      const serializedAnswers = JSON.stringify(answers);
 
-        storedAnswers[currentWorkItemId] = answers;
-        await dataManager.setValue('answers', storedAnswers, { scopeType: 'Default' });
-        alert("Answers saved successfully!");
-      }
+      // Assume 'Custom.AnswersField' is the reference name of your custom field
+      await workItemFormService.setFieldValue('Custom.AnswersField', serializedAnswers);
+      alert('Answers saved successfully to Work Item field!');
     } catch (error) {
-      console.error("Error saving answers:", error);
+      console.error('Error saving answers to Work Item field:', error);
     }
   };
 
@@ -129,7 +112,7 @@ const QuestionnaireForm: React.FC = () => {
       ) : (
         <div>No questions available.</div>
       )}
-      <Button text="Save Answers" onClick={saveAnswers} />
+      <Button text="Save Answers" onClick={saveAnswersToWorkItemField} />
     </div>
   );
 };
