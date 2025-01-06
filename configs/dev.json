@@ -1,7 +1,7 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.80",
+  "version": "1.0.81",
   "contributions": [
     {
       "id": "livrable-control",

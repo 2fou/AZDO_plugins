@@ -2,6 +2,9 @@
 
 This project is an Azure DevOps extension that provides a questionnaire form for work items. It enables users to answer a series of questions specific to each work item and store the responses directly in a custom field of the work item.
 
+https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatureAddon.feature-livrable-extension&targetId=9ed4a67e-0bf4-48ce-9276-8750bc557cd4&utm_source=vstsproduct&utm_medium=ExtHubManageList
+
+
 ## Features
 
 - Load predefined questions from Azure DevOps Extension Data Service.
@@ -62,6 +65,9 @@ This project is an Azure DevOps extension that provides a questionnaire form for
 
 ## Usage
 
+- Setup a new custom field "AnswersField" in a process, this field can be hidden from the work item type.
+- Add the Livrable Control to the workitem type
+- Add questions to the project through project/setting/extension
 - Navigate to a work item in your Azure DevOps project.
 - Use the integrated tab to fill out the questionnaire.
 - Save your responses, and they will persist in the associated work item custom field.
