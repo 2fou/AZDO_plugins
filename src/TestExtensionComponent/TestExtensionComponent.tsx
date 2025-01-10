@@ -11,9 +11,11 @@ import { showRootComponent } from '../Common/Common';
 interface Question {
   id: string;
   text: string;
+  weight: number;
 }
 
 interface AnswerDetail {
+  questionText: string;
   answer: boolean;
   link: string;
 }
@@ -44,7 +46,7 @@ const QuestionnaireForm: React.FC = () => {
         setQuestions(loadedQuestions);
 
         // Load existing answers from the work item field
-        const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField') as string;
+        const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
         if (fieldValue) {
           setAnswers(JSON.parse(fieldValue));
         }
@@ -56,15 +58,17 @@ const QuestionnaireForm: React.FC = () => {
     initializeSDK();
   }, []);
 
-  const handleAnswerChange = (questionId: string, checked: boolean) => {
-    setAnswers(prev => ({
+  const handleAnswerChange = (questionId: string, questionText: string, checked: boolean) => {
+    setAnswers((prev) => ({
       ...prev,
       [questionId]: {
+        questionText,
         answer: checked,
-        link: checked ? (prev[questionId]?.link || '') : ''
-      }
+        link: checked ? prev[questionId]?.link || '' : '',
+      },
     }));
   };
+  
 
   const handleLinkChange = (questionId: string, link: string) => {
     setAnswers(prev => ({
@@ -73,18 +77,29 @@ const QuestionnaireForm: React.FC = () => {
     }));
   };
 
+  const calculateUniqueResult = () => {
+    return questions.reduce((total, question) => {
+      if (answers[question.id]?.answer) {
+        return total + question.weight;
+      }
+      return total;
+    }, 0);
+  };
+  
   const saveAnswersToWorkItemField = async () => {
     if (!currentWorkItemId) return;
-
+  
+    const uniqueResult = calculateUniqueResult();
+    console.log("Unique Result:", uniqueResult);
+  
     try {
       const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-
-      // Serialize your answers object to a JSON string or any preferred format
-      const serializedAnswers = JSON.stringify(answers);
-
-      // Assume 'Custom.AnswersField' is the reference name of your custom field
+  
+      // Ajouter le résultat unique dans l'objet sérialisé
+      const serializedAnswers = JSON.stringify({ ...answers, uniqueResult });
+  
       await workItemFormService.setFieldValue('Custom.AnswersField', serializedAnswers);
-      alert('Answers saved successfully to Work Item field!');
+      alert('Answers and unique result saved successfully to Work Item field!');
     } catch (error) {
       console.error('Error saving answers to Work Item field:', error);
     }
@@ -98,7 +113,7 @@ const QuestionnaireForm: React.FC = () => {
             <Checkbox
               label={question.text}
               checked={answers[question.id]?.answer || false}
-              onChange={(e, checked) => handleAnswerChange(question.id, checked)}
+              onChange={(e, checked) =>  handleAnswerChange(question.id, question.text, checked)}
             />
             {answers[question.id]?.answer && (
               <TextField
