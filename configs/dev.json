@@ -1,7 +1,7 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.82",
+  "version": "1.0.103",
   "contributions": [
     {
       "id": "livrable-control",
@@ -12,7 +12,7 @@
       "properties": {
         "name": "Livrable Control",
         "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
-        "height": 300
+        "height": 500
       }
     },
     {
@@ -25,6 +25,18 @@
         "name": "Questionnaire Configuration",
         "order": 99,
         "uri": "dist/TestConfiguration/TestConfiguration.html"
+      }
+    },
+    {
+      "id": "progress-indicator-control",
+      "type": "ms.vss-work-web.work-item-form-control",
+      "targets": [
+        "ms.vss-work-web.work-item-form"
+      ],
+      "properties": {
+        "name": "Progress Indicator",
+        "uri": "dist/TestProgressIndicator/TestProgressIndicator.html",
+        "height": 500
       }
     }
   ]

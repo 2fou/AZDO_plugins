@@ -3,33 +3,31 @@ import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { Button } from 'azure-devops-ui/Button';
 import { TextField } from 'azure-devops-ui/TextField';
-import { IExtensionDataService, IProjectPageService, CommonServiceIds } from "azure-devops-extension-api";
+import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
+import { Question, normalizeQuestions } from '../Common/Common';
 
-
-interface Question {
-    id: string;
-    text: string;
-    weight: number;
-}
 
 const ConfigurationPage: React.FC = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [newQuestion, setNewQuestion] = useState('');
+    const [newExpectedEntriesCount, setNewExpectedEntriesCount] = useState<number>(1);
+    const [newLabels, setNewLabels] = useState<string[]>([]);
+    const [newTypes, setNewTypes] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const initializeSDK = async () => {
-            console.log("Initializing SDK...");
+            console.log('Initializing SDK...');
             await SDK.init();
             try {
                 await loadQuestions();
             } catch (err) {
-                console.error("Failed to load questions:", err);
-                setError("Failed to load questions.");
+                console.error('Failed to load questions:', err);
+                setError('Failed to load questions.');
             } finally {
                 setIsLoading(false);
-                console.log("Initialization complete.");
+                console.log('Initialization complete.');
             }
         };
 
@@ -37,92 +35,159 @@ const ConfigurationPage: React.FC = () => {
     }, []);
 
     const loadQuestions = async () => {
-        console.log("Loading questions...");
         const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
         const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
-        const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService);
-        const project = await projectService.getProject();
 
-        if (project) {  // Make sure project is defined
-            try {
-                const loadedQuestions = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
-            if (loadedQuestions) {
-                // Assigner dynamiquement les poids basés sur des puissances de 2
-                const questionsWithWeights = loadedQuestions.map((question, index) => ({
-                    ...question,
-                    weight: Math.pow(2, index)
-                }));
-
-                console.log("Loaded Questions with Weights:", questionsWithWeights);
-                setQuestions(questionsWithWeights);
-
-            }
-        } catch (error) {
-            console.warn("No questions found or invalid type.");
-        }
-    } else {
-        setError("Project not found.");
-}
+        const loadedQuestionsRaw = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
+        const loadedQuestions = normalizeQuestions(loadedQuestionsRaw);
+        setQuestions(loadedQuestions);
     };
 
-const saveQuestions = async () => {
-    try {
-        const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
-        const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
-        const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService);
-        const project = await projectService.getProject();
+    const saveQuestions = async () => {
+        try {
+            const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+            const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
-        if (project) {  // Make sure project is defined
-            await dataManager.setValue('questions', questions, {
-                scopeType: 'Default', // Use 'Default' or another correct type
-            });
-            alert("Questions saved successfully!");
-        } else {
-            setError("Project not found.");
+            await dataManager.setValue('questions', questions, { scopeType: 'Default' });
+            alert('Questions saved successfully!');
+        } catch (err) {
+            console.error('Failed to save questions:', err);
+            setError('Failed to save questions.');
         }
-    } catch (err) {
-        console.error("Failed to save questions:", err);
-        setError("Failed to save questions.");
-    }
-};
+    };
 
-const addQuestion = () => {
-    if (newQuestion) {
-        // Determine the next weight by finding the maximum weight and assigning twice that
-        const nextWeight = questions.length > 0 ? Math.max(...questions.map(q => q.weight)) * 2 : 1;
-        setQuestions([
-            ...questions,
-            { id: Date.now().toString(), text: newQuestion, weight: nextWeight }
-        ]);
-        setNewQuestion('');
-    }
-};
+    const addQuestion = () => {
+        if (newQuestion) {
+            const entryCount = newExpectedEntriesCount;
+            const newQuestionObj: Question = {
+                id: Date.now().toString(),
+                text: newQuestion,
+                expectedEntries: {
+                    count: entryCount,
+                    labels: newLabels.slice(0, entryCount).map((label, i) => label || `Entry ${i + 1}`),
+                    types: newTypes.slice(0, entryCount).map((type, i) => type || 'url'), // Default to 'url' if not set
+                    weights: Array.from({ length: entryCount }, (_, i) => Math.pow(2, i)) // Assign powers of 2
+                }
+            };
 
-const removeQuestion = (id: string) => {
-    setQuestions(questions.filter(q => q.id !== id));
-};
+            setQuestions([...questions, newQuestionObj]);
+            setNewQuestion('');
+            setNewExpectedEntriesCount(1);
+            setNewLabels([]);
+            setNewTypes([]);
+        }
+    };
 
-if (isLoading) return <div>Loading...</div>;
-if (error) return <div>{error}</div>;
+    const handleExpectedEntriesCountChange = (questionId: string, count: number) => {
+        setQuestions(questions.map(q =>
+            q.id === questionId
+                ? { ...q, expectedEntries: { ...q.expectedEntries, count } }
+                : q
+        ));
+    };
 
-return (
-    <div>
-        <h2>Questionnaire Configuration</h2>
-        {questions.map(question => (
-            <div key={question.id}>
-                <TextField value={question.text} readOnly />
-                <Button text="Remove" onClick={() => removeQuestion(question.id)} />
-            </div>
-        ))}
-        <TextField
-            value={newQuestion}
-            onChange={(e, value) => setNewQuestion(value)}
-            placeholder="Enter new question"
-        />
-        <Button text="Add Question" onClick={addQuestion} />
-        <Button text="Save Questions" onClick={saveQuestions} />
-    </div>
-);
+    const handleLabelChange = (questionId: string, index: number, label: string) => {
+        setQuestions(questions.map(q =>
+            q.id === questionId
+                ? {
+                    ...q,
+                    expectedEntries: {
+                        ...q.expectedEntries,
+                        labels: q.expectedEntries.labels.map((l, i) => i === index ? label : l)
+                    }
+                }
+                : q
+        ));
+    };
+
+    const handleTypeChange = (questionId: string, index: number, type: string) => {
+        setQuestions(questions.map(q =>
+            q.id === questionId
+                ? {
+                    ...q,
+                    expectedEntries: {
+                        ...q.expectedEntries,
+                        types: q.expectedEntries.types.map((t, i) => i === index ? type : t)
+                    }
+                }
+                : q
+        ));
+    };
+
+    return (
+        <div>
+            <h2>Questionnaire Configuration</h2>
+            {questions.map(question => (
+                <div key={question.id}>
+                    <TextField value={question.text} readOnly />
+                    <TextField
+                        value={question.expectedEntries.count.toString()}
+                        onChange={(e, value) => {
+                            const numericValue = Number(value);
+                            if (!isNaN(numericValue)) {
+                                handleExpectedEntriesCountChange(question.id, numericValue);
+                            }
+                        }}
+                        placeholder="Number of entries"
+                    />
+                    {Array.from({ length: question.expectedEntries.count }).map((_, index) => (
+                        <div key={index}>
+                            <TextField
+                                value={question.expectedEntries.labels[index] || ''}
+                                onChange={(e, value) => handleLabelChange(question.id, index, value || '')}
+                                placeholder={`Label for entry ${index + 1}`}
+                            />
+                            <select onChange={(e) => handleTypeChange(question.id, index, e.target.value)}>
+                                <option value="url">URL</option>
+                                <option value="boolean">Todo/Done</option>
+                                <option value="workItem">Work Item</option>
+                            </select>
+                        </div>
+                    ))}
+                    <Button text="Remove" onClick={() => setQuestions(questions.filter(q => q.id !== question.id))} />
+                </div>
+            ))}
+            <TextField
+                value={newQuestion}
+                onChange={(e, value) => setNewQuestion(value)}
+                placeholder="Enter new question"
+            />
+            <TextField
+                value={newExpectedEntriesCount.toString()}
+                onChange={(e, value) => {
+                    const numericValue = Number(value);
+                    if (!isNaN(numericValue)) {
+                        setNewExpectedEntriesCount(numericValue);
+                    }
+                }}
+                placeholder="Number of entries"
+            />
+            {Array.from({ length: newExpectedEntriesCount }).map((_, index) => (
+                <div key={index}>
+                    <TextField
+                        value={newLabels[index] || ''}
+                        onChange={(e, value) => setNewLabels(labels => {
+                            const updated = [...labels];
+                            updated[index] = value || '';
+                            return updated;
+                        })}
+                        placeholder={`Label for entry ${index + 1}`}
+                    />
+                    <select onChange={(e) => setNewTypes(types => {
+                        const updated = [...types];
+                        updated[index] = e.target.value;
+                        return updated;
+                    })}>
+                        <option value="url">URL</option>
+                        <option value="boolean">Todo/Done</option>
+                        <option value="workItem">Work Item</option>
+                    </select>
+                </div>
+            ))}
+            <Button text="Add Question" onClick={addQuestion} />
+            <Button text="Save Questions" onClick={saveQuestions} />
+        </div>
+    );
 };
 
 export default ConfigurationPage;
