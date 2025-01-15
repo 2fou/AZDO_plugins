@@ -4,7 +4,7 @@ import * as SDK from 'azure-devops-extension-sdk';
 import { Button } from 'azure-devops-ui/Button';
 import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
-import { Question, normalizeQuestions } from '../Common/Common';
+import { Question, normalizeQuestions, showRootComponent } from '../Common/Common';
 
 
 const ConfigurationPage: React.FC = () => {
@@ -190,4 +190,5 @@ const ConfigurationPage: React.FC = () => {
     );
 };
 
+showRootComponent(<ConfigurationPage />, 'configuration-root')
 export default ConfigurationPage;

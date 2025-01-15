@@ -1,20 +1,8 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.103",
+  "version": "1.0.120",
   "contributions": [
-    {
-      "id": "livrable-control",
-      "type": "ms.vss-work-web.work-item-form-control",
-      "targets": [
-        "ms.vss-work-web.work-item-form"
-      ],
-      "properties": {
-        "name": "Livrable Control",
-        "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
-        "height": 500
-      }
-    },
     {
       "id": "configuration",
       "type": "ms.vss-web.hub",
@@ -24,7 +12,7 @@
       "properties": {
         "name": "Questionnaire Configuration",
         "order": 99,
-        "uri": "dist/TestConfiguration/TestConfiguration.html"
+        "uri": "dist/TestConfigurationPage/TestConfigurationPage.html"
       }
     },
     {
@@ -36,8 +24,20 @@
       "properties": {
         "name": "Progress Indicator",
         "uri": "dist/TestProgressIndicator/TestProgressIndicator.html",
+        "height": 300
+      }
+    },
+    {
+      "id": "livrable-control",
+      "type": "ms.vss-work-web.work-item-form-control",
+      "targets": [
+        "ms.vss-work-web.work-item-form"
+      ],
+      "properties": {
+        "name": "Livrable Control",
+        "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
         "height": 500
       }
-    }
+    }   
   ]
 }

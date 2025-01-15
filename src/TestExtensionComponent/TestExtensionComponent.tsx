@@ -7,19 +7,17 @@ import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from "azure-devops-extension-api";
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from "azure-devops-extension-api/WorkItemTracking";
-import { showRootComponent } from '../Common/Common';
-import { Question, EntryDetail, normalizeQuestions, AnswerDetail } from '../Common/Common';
+import { showRootComponent, Question, EntryDetail, normalizeQuestions, AnswerDetail, decodeHtmlEntities } from '../Common/Common';
 import { WorkItemPicker } from "../Common/WorkItemPicker";
-
 
 const QuestionnaireForm: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail }>({});
   const [currentWorkItemId, setCurrentWorkItemId] = useState<string | null>(null);
 
-  const decodeHtmlEntities = (str: string): string => {
-    return str.replace(/&quot;/g, '"');
-  };
+  useEffect(() => {
+    initializeSDK();
+  }, []);
 
   const initializeSDK = async () => {
     console.log("Initializing SDK...");
@@ -27,26 +25,19 @@ const QuestionnaireForm: React.FC = () => {
 
     try {
       const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-
-      // Get the current work item ID
       const workItemId = await workItemFormService.getId();
       setCurrentWorkItemId(workItemId.toString());
 
       const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
       const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
-      // Load questions
       const loadedQuestions = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
       console.log("Loaded Questions:", loadedQuestions);
       setQuestions(normalizeQuestions(loadedQuestions));
 
-      // Load existing answers from the work item field
       const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
-      console.log("Field Value before JSON.parse:", fieldValue);
       if (fieldValue) {
-        // Decode the HTML entities
         const decodedFieldValue = decodeHtmlEntities(fieldValue);
-        console.log("Decoded Field Value:", decodedFieldValue);
         try {
           const parsedAnswers = JSON.parse(decodedFieldValue);
           setAnswers(parsedAnswers);
@@ -58,10 +49,6 @@ const QuestionnaireForm: React.FC = () => {
       console.error("SDK Initialization Error: ", error);
     }
   };
-
-  useEffect(() => {
-    initializeSDK();
-  }, []);
 
   const handleEntryChange = (
     questionId: string,
@@ -79,45 +66,100 @@ const QuestionnaireForm: React.FC = () => {
     setAnswers((prev) => ({
       ...prev,
       [questionId]: {
-        questionText: question?.text || "",
+        questionText: question?.text ?? "",
         entries: updatedEntries,
       },
     }));
   };
 
-  const calculateUniqueResult = () => {
-    return questions.reduce((total, question) => {
-      const answerDetail = answers[question.id];
+  const handleCheckboxChange = (question: Question, checked: boolean) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [question.id]: checked
+        ? createAnsweredObject(question)
+        : { questionText: question.text, entries: [] },
+    }));
+  };
+
+  const createAnsweredObject = (question: Question) => ({
+    questionText: question.text,
+    entries: question.expectedEntries.labels.map((label, i) => ({
+      label,
+      type: question.expectedEntries.types[i],
+      value: question.expectedEntries.types[i] === 'boolean' ? false : '',
+      weight: question.expectedEntries.weights[i],
+    })),
+  });
+
+  const calculateUniqueResultForQuestions = () => {
+    const updatedAnswers = { ...answers };
+
+    questions.forEach((question) => {
+      const answerDetail = updatedAnswers[question.id];
       if (answerDetail) {
         const entryTotal = answerDetail.entries.reduce((entrySum, entry) => {
           if (entry.value) {
-            return entrySum + entry.weight; // Use entry-specific weight
+            return entrySum + entry.weight;
           }
           return entrySum;
         }, 0);
 
-        return total + entryTotal;
+        updatedAnswers[question.id].uniqueResult = entryTotal;
       }
-      return total;
-    }, 0);
+    });
+
+    return updatedAnswers;
   };
 
   const saveAnswersToWorkItemField = async () => {
     if (!currentWorkItemId) return;
 
-    const uniqueResult = calculateUniqueResult();
-    console.log("Unique Result:", uniqueResult);
+    const updatedAnswers = calculateUniqueResultForQuestions();
+    console.log("Updated Answers with Unique Results:", updatedAnswers);
 
     try {
       const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-
-      // Add the unique result to the serialized object
-      const serializedAnswers = JSON.stringify({ ...answers, uniqueResult });
-
+      const serializedAnswers = JSON.stringify(updatedAnswers);
       await workItemFormService.setFieldValue('Custom.AnswersField', serializedAnswers);
-      alert('Answers and unique result saved successfully to Work Item field!');
+      alert('Answers and unique results saved successfully to Work Item field!');
     } catch (error) {
       console.error('Error saving answers to Work Item field:', error);
+    }
+  };
+
+  const renderEntryField = (entry: EntryDetail, questionId: string, index: number) => {
+    switch (entry.type) {
+      case 'boolean':
+        return (
+          <Checkbox
+            label="Done"
+            checked={entry.value as boolean}
+            onChange={(_, checked) => handleEntryChange(questionId, index, entry.label, checked, entry.type)}
+          />
+        );
+      case 'workItem':
+        return (
+          <>
+            <TextField
+              value={entry.value as string || ''}
+              readOnly
+              placeholder="Selected Work Item ID"
+              className="flex-grow-text-field"
+            />
+            <WorkItemPicker
+              onWorkItemSelected={(workItemId) => handleEntryChange(questionId, index, entry.label, workItemId.toString(), entry.type)}
+            />
+          </>
+        );
+      default:
+        return (
+          <TextField
+            value={entry.value as string || ''}
+            onChange={(_, newValue) => handleEntryChange(questionId, index, entry.label, newValue || '', entry.type)}
+            placeholder="Enter URL"
+            className="flex-grow-text-field"
+          />
+        );
     }
   };
 
@@ -129,51 +171,12 @@ const QuestionnaireForm: React.FC = () => {
             <Checkbox
               label={question.text}
               checked={answers[question.id]?.entries?.length > 0}
-              onChange={(e, checked) =>
-                setAnswers((prev) => ({
-                  ...prev,
-                  [question.id]: checked
-                    ? {
-                      questionText: question.text,
-                      entries: question.expectedEntries.labels.map((label, i) => ({
-                        label,
-                        type: question.expectedEntries.types[i],
-                        value: question.expectedEntries.types[i] === 'boolean' ? false : '',
-                        weight: question.expectedEntries.weights[i] // Set weight
-                      }))
-                    }
-                    : { questionText: question.text, entries: [] },
-                }))
-              }
-            />            {answers[question.id]?.entries && answers[question.id].entries.map((entry, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
+              onChange={(_, checked) => handleCheckboxChange(question, checked)}
+            />
+            {answers[question.id]?.entries?.map((entry, index) => (
+              <div key={`${question.id}-${entry.label}`} style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{ marginRight: '8px' }}>{entry.label} :</span>
-                {entry.type === 'boolean' ? (
-                  <Checkbox
-                    label="Done"
-                    checked={entry.value as boolean}
-                    onChange={(e, checked) => handleEntryChange(question.id, index, entry.label, checked, entry.type)}
-                  />
-                ) : entry.type === 'workItem' ? (
-                  <>
-                    <TextField
-                      value={entry.value as string || ''}
-                      readOnly
-                      placeholder="Selected Work Item ID"
-                      className="flex-grow-text-field"
-                    />
-                    <WorkItemPicker
-                      onWorkItemSelected={(workItemId) => handleEntryChange(question.id, index, entry.label, workItemId.toString(), entry.type)}
-                    />
-                  </>
-                ) : (
-                  <TextField
-                    value={entry.value as string || ''}
-                    onChange={(e, newValue) => handleEntryChange(question.id, index, entry.label, newValue || '', entry.type)}
-                    placeholder="Enter URL"
-                    className="flex-grow-text-field"
-                  />
-                )}
+                {renderEntryField(entry, question.id, index)}
               </div>
             ))}
           </div>
@@ -186,4 +189,4 @@ const QuestionnaireForm: React.FC = () => {
   );
 };
 
-showRootComponent(<QuestionnaireForm />);
+showRootComponent(<QuestionnaireForm />, 'extension-root');

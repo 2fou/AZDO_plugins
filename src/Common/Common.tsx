@@ -4,10 +4,9 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import "./Common.scss";
 
-export function showRootComponent(component: React.ReactElement<any>) {
-  ReactDOM.render(component, document.getElementById("root"));
+export function showRootComponent(component: React.ReactElement<any>, containerId: string) {
+  ReactDOM.render(component, document.getElementById(containerId));
 }
-
 
 export interface Question {
   id: string;
@@ -30,14 +29,13 @@ export interface EntryDetail {
 export interface AnswerDetail {
   questionText: string;
   entries: EntryDetail[];
-  uniqueResult?: number
+  uniqueResult?: number; // Unique result per question
 }
 
 export const normalizeQuestions = (loadedQuestions: any[]): Question[] => {
   return loadedQuestions.map(question => ({
     id: question.id || "",
     text: question.text || "",
-    weight: question.weight || 1,
     expectedEntries: {
       count: question.expectedEntries?.count || 1,
       labels: question.expectedEntries?.labels || Array(question.expectedEntries?.count || 1).fill(""),
@@ -48,10 +46,10 @@ export const normalizeQuestions = (loadedQuestions: any[]): Question[] => {
 };
 
 export const decodeHtmlEntities = (str: string): string => {
-    if (!str) return str;
-    return str.replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">");
+  if (!str) return str;
+  return str.replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
 };
