@@ -1,9 +1,9 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { IProjectPageService, getClient, CommonServiceIds } from 'azure-devops-extension-api';
 import { WorkItemTrackingRestClient, WorkItem } from 'azure-devops-extension-api/WorkItemTracking';
 import { AnswerDetail, showRootComponent, decodeHtmlEntities } from '../Common/Common';
+import * as Dashboard from "azure-devops-extension-api/Dashboard";
 
 interface WorkItemProgress {
     id: number;
@@ -13,117 +13,166 @@ interface WorkItemProgress {
     total: number;
 }
 
-const QueryAndFieldDashboardWidget: React.FC = () => {
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [workItemsProgress, setWorkItemsProgress] = useState<WorkItemProgress[]>([]);
+interface IState {
+    title: string;
+    loading: boolean;
+    error: string | null;
+    workItemsProgress: WorkItemProgress[];
+}
 
-    useEffect(() => {
-        let isMounted = true; // Track if the component is mounted
+interface IWidgetSettings {
+    customSettings: {
+        data: string;
+    };
+}
 
-        const initializeAndFetchData = async () => {
-            try {
-                await initializeSDK();
-                console.log("preparing to fetch project info...");
-                const projectInfo = await fetchProjectInfo();
-               
-                if (projectInfo) {
-                    console.log("preparing to fetch work items...");
-                    await fetchAndProcessWorkItems(projectInfo.id);
-                }
-            } catch (err) {
-                console.error("Error:", err);
-                if (isMounted) {
-                    setError("Failed to load data.");
-                }
-            } finally {
-                if (isMounted) {
-                    setLoading(false);
-                }
+class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implements Dashboard.IConfigurableWidget {
+    constructor(props: {}) {
+        super(props);
+        this.state = {
+            title: '',
+            loading: true,
+            error: null,
+            workItemsProgress: []
+        };
+    }
+
+    componentDidMount() {
+        console.log("Component mounted, initializing SDK...");
+        SDK.init().then(() => {
+            SDK.register('query-and-field-dashboard-widget', this);
+            console.log("SDK initialized and widget registered.");
+        });
+    }
+
+    render(): JSX.Element {
+        const { title, loading, error, workItemsProgress } = this.state;
+        if (loading) {
+            return <div>Loading work item progress...</div>;
+        }
+
+        if (error) {
+            return <div>Error: {error}</div>;
+        }
+
+        return (
+            <div>
+                <h3>{title || "Work Item Progress"}</h3>
+                {workItemsProgress.map(({ id, title, progress, completed, total }) => (
+                    <div key={id}>
+                        <h4>{title}</h4>
+                        <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
+                            <div
+                                style={{
+                                    width: `${progress}%`,
+                                    backgroundColor: '#76c7c0',
+                                    height: '24px',
+                                    borderRadius: '8px'
+                                }}
+                            />
+                        </div>
+                        <div>{`Work Item ID: ${id}, Progress: ${progress.toFixed(2)}%, Completed ${completed} out of ${total}`}</div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
+
+    async preload(): Promise<Dashboard.WidgetStatus> {
+        console.log("Preloading widget...");
+        return Dashboard.WidgetStatusHelper.Success();
+    }
+
+    async load(widgetSettings: Dashboard.WidgetSettings): Promise<Dashboard.WidgetStatus> {
+        console.log("Loading widget with settings:", widgetSettings);
+        try {
+            await this.initializeAndFetchData(widgetSettings);
+            console.log("Widget loaded successfully.");
+            return Dashboard.WidgetStatusHelper.Success();
+        } catch (e) {
+            console.error("Loading widget failed:", e);
+            return Dashboard.WidgetStatusHelper.Failure((e as any).toString());
+        }
+    }
+
+    async reload(widgetSettings: Dashboard.WidgetSettings): Promise<Dashboard.WidgetStatus> {
+        console.log("Reloading widget with settings:", widgetSettings);
+        return this.load(widgetSettings);
+    }
+
+    private async initializeAndFetchData(widgetSettings: Dashboard.WidgetSettings) {
+        console.log("Initializing data fetch...");
+        this.setState({
+            title: widgetSettings.name || 'Default Title',
+        });
+
+        const customData: IWidgetSettings = JSON.parse(widgetSettings.customSettings.data || '{}');
+        console.log("Custom settings data:", customData);
+
+        try {
+            const projectInfo = await this.fetchProjectInfo();
+            if (projectInfo) {
+                console.log("Project info fetched:", projectInfo);
+                await this.fetchAndProcessWorkItems(projectInfo.id);
+            } else {
+                console.warn("No project info found.");
             }
-        };
+        } catch (err) {
+            console.error("Error during data fetch:", err);
+            this.setState({ error: "Failed to load data." });
+        } finally {
+            this.setState({ loading: false });
+        }
+    }
 
-        const initializeSDK = async () => {
-            await SDK.init();
-            await SDK.ready();
-            console.log("SDK initialized and ready...");
-        };
+    private async fetchProjectInfo() {
+        try {
+            const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService);
+            const project = await projectService.getProject();
+            console.log("Fetched project info:", project);
+            return project;
+        } catch (error) {
+            console.error("Error fetching project info:", error);
+            throw error;
+        }
+    }
 
-        const fetchProjectInfo = () => {
-            const projectServicePromise = SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService);
-            
-            return projectServicePromise.then(projectService => {
-                console.log("projectService instantiated...");
-                
-                return projectService.getProject().then(project => {
-                    
-                    console.log("Project info fetched...");
-                    return project; // Return the fetched project information
-                });
-            }).catch(error => {
-                console.error("Error fetching project info:", error);
-                throw error; // Optional: rethrow the error for further handling
-            });
-        };
-
-        const fetchAndProcessWorkItems = async (projectId: string) => {
+    private async fetchAndProcessWorkItems(projectId: string) {
+        try {
             const client = getClient(WorkItemTrackingRestClient);
-            console.log("WorkItemTrackingRestClient instantiated...");
-
+            console.log("Fetching work items...");
             const wiqlQuery = {
-                query: `SELECT [System.Id], [System.Title], [Custom.AnswersField] FROM WorkItems WHERE [System.TeamProject] = @project AND [Custom.AnswersField] IS NOT NULL ORDER BY [System.Id]`
-            };
-
+                query: `SELECT [System.Id], [System.Title], [Custom.AnswersField] FROM WorkItems WHERE [System.TeamProject] = @project AND [Custom.AnswersField] Is Not Empty ORDER BY [System.Id]`,
+                parameters: { project: projectId }
+            };            
             const queryResult = await client.queryByWiql(wiqlQuery, projectId);
             const workItemRefs = queryResult.workItems;
-            console.log(`Number of work items found: ${workItemRefs.length}`);
+            console.log("Number of work item references:", workItemRefs.length);
 
-            if (isMounted && workItemRefs.length > 0) {
-                const workItems = await client.getWorkItems(
-                    workItemRefs.map(wi => wi.id),
-                    undefined,
-                    ['System.Title', 'Custom.AnswersField']
-                );
-
-                if (isMounted) {
-                    if (!workItems || workItems.length === 0) {
-                        console.warn("No work items were returned.");
-                    } else {
-                        console.log(`Processing ${workItems.length} work items...`);
-                        const progressData = workItems.map(workItem => mapWorkItemToProgress(workItem));
-                        setWorkItemsProgress(progressData);
-                    }
-                }
+            if (workItemRefs.length > 0) {
+                const workItems = await client.getWorkItems(workItemRefs.map(wi => wi.id), undefined, ['System.Title', 'Custom.AnswersField']);
+                console.log(`Fetched ${workItems.length} work items.`);
+                const progressData = workItems.map(this.mapWorkItemToProgress);
+                this.setState({ workItemsProgress: progressData });
             } else {
                 console.warn("No work item references were found.");
             }
-        };
+        } catch (error) {
+            console.error("Error fetching and processing work items:", error);
+        }
+    }
 
-        // Call the function once on component mount
-        initializeAndFetchData();
-
-        return () => {
-            isMounted = false; // Cleanup function to prevent state updates on unmounted component
-        };
-    }, []); // Empty dependency array ensures this runs once
-
-    const mapWorkItemToProgress = (workItem: WorkItem): WorkItemProgress => {
+    private mapWorkItemToProgress(workItem: WorkItem): WorkItemProgress {
         try {
-            console.log(`Mapping work item ID: ${workItem.id}`);
             const fieldData = workItem.fields['Custom.AnswersField'];
-
             if (fieldData) {
                 const decodedValue = decodeHtmlEntities(fieldData as string);
                 const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
-
                 const totalEntries = answers ? Object.keys(answers).length : 0;
-                const completedEntriesCount = totalEntries > 0 ?
-                    Object.values(answers).filter(answer =>
-                        answer.entries.every(entry => Boolean(entry.value))
-                    ).length : 0;
-
+                const completedEntriesCount = totalEntries > 0 ? Object.values(answers).filter(answer => answer.entries.every(entry => Boolean(entry.value))).length : 0;
                 const progress = totalEntries > 0 ? (completedEntriesCount / totalEntries) * 100 : 0;
 
+                console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
                 return {
                     id: workItem.id,
                     title: workItem.fields['System.Title'] || "Untitled",
@@ -145,37 +194,7 @@ const QueryAndFieldDashboardWidget: React.FC = () => {
             completed: 0,
             total: 0
         };
-    };
-
-    if (loading) {
-        return <div>Loading work item progress...</div>;
     }
+}
 
-    if (error) {
-        return <div>Error: {error}</div>;
-    }
-
-    return (
-        <div>
-            <h3>Work Item Progress</h3>
-            {workItemsProgress.map(({ id, title, progress, completed, total }) => (
-                <div key={id}>
-                    <h4>{title}</h4>
-                    <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
-                        <div
-                            style={{
-                                width: `${progress}%`,
-                                backgroundColor: '#76c7c0',
-                                height: '24px',
-                                borderRadius: '8px'
-                            }}
-                        />
-                    </div>
-                    <div>{`Work Item ID: ${id}, Progress: ${progress.toFixed(2)}%, Completed ${completed} out of ${total}`}</div>
-                </div>
-            ))}
-        </div>
-    );
-};
-
-showRootComponent(<QueryAndFieldDashboardWidget />, 'query-and-field-dashboard-root');
+showRootComponent(<QueryAndFieldDashboardWidget />, "query-and-field-dashboard-root");

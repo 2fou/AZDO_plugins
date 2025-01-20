@@ -1,7 +1,7 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.158",
+  "version": "1.0.168",
   "contributions": [
     {
       "id": "configuration",
@@ -82,8 +82,8 @@
         "previewImageUrl": "dist/img/acceptable-risk.png",
         "supportedSizes": [
           {
-            "rowSpan": 1,
-            "columnSpan": 2
+            "rowSpan": 5,
+            "columnSpan": 3
           }
         ],
         "supportedScopes": [
