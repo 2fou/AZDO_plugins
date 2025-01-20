@@ -6,7 +6,6 @@ import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
 import { Question, normalizeQuestions, showRootComponent } from '../Common/Common';
 
-
 const ConfigurationPage: React.FC = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [newQuestion, setNewQuestion] = useState('');
@@ -39,8 +38,10 @@ const ConfigurationPage: React.FC = () => {
         const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
         const loadedQuestionsRaw = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
+        console.log('Questions loaded (raw):', loadedQuestionsRaw);
         const loadedQuestions = normalizeQuestions(loadedQuestionsRaw);
         setQuestions(loadedQuestions);
+        console.log('Questions loaded:', loadedQuestions);
     };
 
     const saveQuestions = async () => {
@@ -65,8 +66,8 @@ const ConfigurationPage: React.FC = () => {
                 expectedEntries: {
                     count: entryCount,
                     labels: newLabels.slice(0, entryCount).map((label, i) => label || `Entry ${i + 1}`),
-                    types: newTypes.slice(0, entryCount).map((type, i) => type || 'url'), // Default to 'url' if not set
-                    weights: Array.from({ length: entryCount }, (_, i) => Math.pow(2, i)) // Assign powers of 2
+                    types: newTypes.slice(0, entryCount).map((type, i) => type || 'url'), // Ensure it always defaults to 'url'
+                    weights: Array.from({ length: entryCount }, (_, i) => Math.pow(2, i))
                 }
             };
 
@@ -74,7 +75,7 @@ const ConfigurationPage: React.FC = () => {
             setNewQuestion('');
             setNewExpectedEntriesCount(1);
             setNewLabels([]);
-            setNewTypes([]);
+            setNewTypes([]);  // Reset types
         }
     };
 
@@ -137,7 +138,10 @@ const ConfigurationPage: React.FC = () => {
                                 onChange={(e, value) => handleLabelChange(question.id, index, value || '')}
                                 placeholder={`Label for entry ${index + 1}`}
                             />
-                            <select onChange={(e) => handleTypeChange(question.id, index, e.target.value)}>
+                            <select 
+                                value={question.expectedEntries.types[index] || 'url'} // Reflect saved type
+                                onChange={(e) => handleTypeChange(question.id, index, e.target.value)}
+                            >
                                 <option value="url">URL</option>
                                 <option value="boolean">Todo/Done</option>
                                 <option value="workItem">Work Item</option>
@@ -173,11 +177,14 @@ const ConfigurationPage: React.FC = () => {
                         })}
                         placeholder={`Label for entry ${index + 1}`}
                     />
-                    <select onChange={(e) => setNewTypes(types => {
-                        const updated = [...types];
-                        updated[index] = e.target.value;
-                        return updated;
-                    })}>
+                    <select 
+                        value={newTypes[index] || 'url'} // Default for new entries
+                        onChange={(e) => setNewTypes(types => {
+                            const updated = [...types];
+                            updated[index] = e.target.value;
+                            return updated;
+                        })}
+                    >
                         <option value="url">URL</option>
                         <option value="boolean">Todo/Done</option>
                         <option value="workItem">Work Item</option>

@@ -1,7 +1,6 @@
 import * as React from "react";
 import * as SDK from "azure-devops-extension-sdk";
-import { IProjectPageService, IProjectInfo, CommonServiceIds } from "azure-devops-extension-api";
-import { getClient } from "azure-devops-extension-api";
+import { IProjectPageService, IProjectInfo, CommonServiceIds,getClient } from "azure-devops-extension-api";
 import { WorkItemTrackingRestClient, WorkItem } from "azure-devops-extension-api/WorkItemTracking";
 import { Dropdown } from "azure-devops-ui/Dropdown";
 import { DropdownSelection } from "azure-devops-ui/Utilities/DropdownSelection";
