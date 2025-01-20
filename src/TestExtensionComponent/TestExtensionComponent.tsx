@@ -33,18 +33,37 @@ const QuestionnaireForm: React.FC = () => {
 
       const loadedQuestions = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
       console.log("Loaded Questions:", loadedQuestions);
-      setQuestions(normalizeQuestions(loadedQuestions));
+      const normalizedQuestions = normalizeQuestions(loadedQuestions);
+      setQuestions(normalizedQuestions);
 
       const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
+      let parsedAnswers: { [questionId: string]: AnswerDetail } = {};
       if (fieldValue) {
         const decodedFieldValue = decodeHtmlEntities(fieldValue);
+        console.log("Loaded Answer:", decodedFieldValue);
         try {
-          const parsedAnswers = JSON.parse(decodedFieldValue);
-          setAnswers(parsedAnswers);
+          parsedAnswers = JSON.parse(decodedFieldValue);
         } catch (parseError) {
           console.error("JSON parsing error:", parseError, "Field Value:", fieldValue);
         }
       }
+
+      // Initialize answers for all questions, including unanswered ones
+      const initialAnswers = normalizedQuestions.reduce((acc, question) => {
+        acc[question.id] = parsedAnswers[question.id] || {
+          questionText: question.text,
+          entries: question.expectedEntries.labels.map((label, index) => ({
+            label,
+            type: question.expectedEntries.types[index],
+            value: question.expectedEntries.types[index] === 'boolean' ? false : '',
+            weight: question.expectedEntries.weights[index],
+          })),
+          uniqueResult: 0
+        };
+        return acc;
+      }, {} as { [questionId: string]: AnswerDetail });
+
+      setAnswers(initialAnswers);
     } catch (error) {
       console.error("SDK Initialization Error: ", error);
     }
@@ -60,14 +79,13 @@ const QuestionnaireForm: React.FC = () => {
     const question = questions.find(q => q.id === questionId);
     const weight = question ? question.expectedEntries.weights[index] : 1;
 
-    const updatedEntries = [...(answers[questionId]?.entries || [])];
-    updatedEntries[index] = { label, type, value, weight };
-
     setAnswers((prev) => ({
       ...prev,
       [questionId]: {
-        questionText: question?.text ?? "",
-        entries: updatedEntries,
+        ...prev[questionId],
+        entries: prev[questionId].entries.map((entry, i) => 
+          i === index ? { ...entry, value, weight } : entry
+        ),
       },
     }));
   };
@@ -77,7 +95,7 @@ const QuestionnaireForm: React.FC = () => {
       ...prev,
       [question.id]: checked
         ? createAnsweredObject(question)
-        : { questionText: question.text, entries: [] },
+        : { questionText: question.text, entries: [], uniqueResult: 0 },
     }));
   };
 
@@ -89,28 +107,30 @@ const QuestionnaireForm: React.FC = () => {
       value: question.expectedEntries.types[i] === 'boolean' ? false : '',
       weight: question.expectedEntries.weights[i],
     })),
+    uniqueResult: 0,
   });
 
   const calculateUniqueResultForQuestions = () => {
     const updatedAnswers = { ...answers };
-
+  
     questions.forEach((question) => {
-      const answerDetail = updatedAnswers[question.id];
-      if (answerDetail) {
-        const entryTotal = answerDetail.entries.reduce((entrySum, entry) => {
-          if (entry.value) {
-            return entrySum + entry.weight;
-          }
-          return entrySum;
-        }, 0);
-
-        updatedAnswers[question.id].uniqueResult = entryTotal;
-      }
+      const answerDetail = updatedAnswers[question.id] || { entries: [] };
+      const entryTotal = answerDetail.entries.reduce((entrySum, entry) => {
+        if (entry.value) {
+          return entrySum + entry.weight;
+        }
+        return entrySum;
+      }, 0);
+  
+      updatedAnswers[question.id] = {
+        ...answerDetail,
+        uniqueResult: entryTotal
+      };
     });
-
+  
     return updatedAnswers;
   };
-
+  
   const saveAnswersToWorkItemField = async () => {
     if (!currentWorkItemId) return;
 
@@ -128,12 +148,13 @@ const QuestionnaireForm: React.FC = () => {
   };
 
   const renderEntryField = (entry: EntryDetail, questionId: string, index: number) => {
+    const answer = answers[questionId]?.entries[index];
     switch (entry.type) {
       case 'boolean':
         return (
           <Checkbox
             label="Done"
-            checked={entry.value as boolean}
+            checked={answer?.value as boolean || false}
             onChange={(_, checked) => handleEntryChange(questionId, index, entry.label, checked, entry.type)}
           />
         );
@@ -141,7 +162,7 @@ const QuestionnaireForm: React.FC = () => {
         return (
           <>
             <TextField
-              value={entry.value as string || ''}
+              value={answer?.value as string || ''}
               readOnly
               placeholder="Selected Work Item ID"
               className="flex-grow-text-field"
@@ -154,7 +175,7 @@ const QuestionnaireForm: React.FC = () => {
       default:
         return (
           <TextField
-            value={entry.value as string || ''}
+            value={answer?.value as string || ''}
             onChange={(_, newValue) => handleEntryChange(questionId, index, entry.label, newValue || '', entry.type)}
             placeholder="Enter URL"
             className="flex-grow-text-field"
@@ -170,10 +191,10 @@ const QuestionnaireForm: React.FC = () => {
           <div key={question.id}>
             <Checkbox
               label={question.text}
-              checked={answers[question.id]?.entries?.length > 0}
+              checked={answers[question.id]?.entries.some(entry => entry.value)}
               onChange={(_, checked) => handleCheckboxChange(question, checked)}
             />
-            {answers[question.id]?.entries?.map((entry, index) => (
+            {answers[question.id]?.entries.map((entry, index) => (
               <div key={`${question.id}-${entry.label}`} style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{ marginRight: '8px' }}>{entry.label} :</span>
                 {renderEntryField(entry, question.id, index)}
