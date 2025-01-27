@@ -162,39 +162,51 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         }
     }
 
-    private mapWorkItemToProgress(workItem: WorkItem): WorkItemProgress {
-        try {
-            const fieldData = workItem.fields['Custom.AnswersField'];
-            if (fieldData) {
-                const decodedValue = decodeHtmlEntities(fieldData as string);
-                const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
-                const totalEntries = answers ? Object.keys(answers).length : 0;
-                const completedEntriesCount = totalEntries > 0 ? Object.values(answers).filter(answer => answer.entries.every(entry => Boolean(entry.value))).length : 0;
-                const progress = totalEntries > 0 ? (completedEntriesCount / totalEntries) * 100 : 0;
+private mapWorkItemToProgress(workItem: WorkItem): WorkItemProgress {
+    try {
+        const fieldData = workItem.fields['Custom.AnswersField'];
+        if (fieldData) {
+            const decodedValue = decodeHtmlEntities(fieldData as string);
+            const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
 
-                console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
-                return {
-                    id: workItem.id,
-                    title: workItem.fields['System.Title'] || "Untitled",
-                    progress,
-                    completed: completedEntriesCount,
-                    total: totalEntries
-                };
-            } else {
-                console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
+            const totalEntries = Object.keys(answers).length;
+            let completedEntriesCount = 0;
+
+            // Iterate over each AnswerDetail
+            for (const answer of Object.values(answers)) {
+                if (answer.entries && answer.entries.length > 0) {
+                    // If there are entries, check if all are non-empty
+                    if (answer.entries.every(entry => Boolean(entry.value))) {
+                        completedEntriesCount += 1;
+                    }
+                }
             }
-        } catch (parseError) {
-            console.error("Error parsing field data:", parseError);
-        }
 
-        return {
-            id: workItem.id,
-            title: workItem.fields['System.Title'] || "Untitled",
-            progress: 0,
-            completed: 0,
-            total: 0
-        };
+            const progress = totalEntries > 0 ? (completedEntriesCount / totalEntries) * 100 : 0;
+
+            console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
+            return {
+                id: workItem.id,
+                title: workItem.fields['System.Title'] || "Untitled",
+                progress,
+                completed: completedEntriesCount,
+                total: totalEntries
+            };
+        } else {
+            console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
+        }
+    } catch (parseError) {
+        console.error("Error parsing field data:", parseError);
     }
+
+    return {
+        id: workItem.id,
+        title: workItem.fields['System.Title'] || "Untitled",
+        progress: 0,
+        completed: 0,
+        total: 0
+    };
+}
 }
 
 showRootComponent(<QueryAndFieldDashboardWidget />, "query-and-field-dashboard-root");

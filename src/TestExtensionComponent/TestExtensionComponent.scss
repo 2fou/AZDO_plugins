@@ -1,5 +1,8 @@
+//Not sure if the statement below is still up to date?
 @import "node_modules/azure-devops-ui/Core/_platformCommon.scss";
+@import "azure-devops-ui/Core/override.css";
+
 .flex-grow-text-field {
-    flex-grow: 1;
-  }
-  
+  flex-grow: 1;
+}
+

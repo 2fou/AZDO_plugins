@@ -16,6 +16,7 @@ fs.readdirSync(srcDir).filter(dir => {
 module.exports = (env, argv) => ({
     entry: entries,
     output: {
+        publicPath: "/dist/",
         filename: "[name]/[name].js"
     },
     resolve: {

@@ -1,0 +1,49 @@
+/* ConfigurationPage.css */
+
+.configuration-container {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    width: 200%;
+    max-width: 1600px; // Adjust this value to your preference
+}
+
+/*
+.question-item {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 10px;
+    width: 200%;
+    max-width: 1600px; // Adjust this value to your preference
+}
+
+.entry-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    width: 200%; // Ensures elements inside scale correctly
+    max-width: 1200px; // Allow elements to use more space
+}
+
+.flex-column {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    width: 200%; // Ensures elements inside scale correctly
+    max-width: 1200px; // Allow elements to use more space
+}
+
+.new-question {
+    width: 200%; // or set a specific pixel value like 500px
+    max-width: 800px; // Optionally, define a max-width
+    margin: 0 auto; // Center container if space allows
+}
+
+
+.configuration-root {
+    width: 200%;
+    max-width: 1600px; // Adjust this value to your preference
+    margin: 0 auto; // Centers the container within its parent
+    padding: 20px; // Optional, to add some space inside the container
+}
+*/

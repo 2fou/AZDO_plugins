@@ -1,8 +1,10 @@
+import './TestConfigurationPage.scss'; // Import the SCSS for styling
+
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { Button } from 'azure-devops-ui/Button';
-import { TextField } from 'azure-devops-ui/TextField';
+import { TextField, TextFieldWidth } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
 import { Question, normalizeQuestions, showRootComponent } from '../Common/Common';
 
@@ -66,7 +68,7 @@ const ConfigurationPage: React.FC = () => {
                 expectedEntries: {
                     count: entryCount,
                     labels: newLabels.slice(0, entryCount).map((label, i) => label || `Entry ${i + 1}`),
-                    types: newTypes.slice(0, entryCount).map((type, i) => type || 'url'), // Ensure it always defaults to 'url'
+                    types: newTypes.slice(0, entryCount).map((type, i) => type || 'url'),
                     weights: Array.from({ length: entryCount }, (_, i) => Math.pow(2, i))
                 }
             };
@@ -75,7 +77,7 @@ const ConfigurationPage: React.FC = () => {
             setNewQuestion('');
             setNewExpectedEntriesCount(1);
             setNewLabels([]);
-            setNewTypes([]);  // Reset types
+            setNewTypes([]);
         }
     };
 
@@ -116,13 +118,13 @@ const ConfigurationPage: React.FC = () => {
     };
 
     return (
-        <div>
+        <div className="configuration-container">
             <h2>Questionnaire Configuration</h2>
             {questions.map(question => (
-                <div key={question.id}>
-                    <TextField value={question.text} readOnly />
+                <div className="question-item" key={question.id}>
+                    <TextField value={question.text || ''} readOnly width={TextFieldWidth.auto} className="full-width-text-field" />
                     <TextField
-                        value={question.expectedEntries.count.toString()}
+                        value={String(question.expectedEntries.count)}
                         onChange={(e, value) => {
                             const numericValue = Number(value);
                             if (!isNaN(numericValue)) {
@@ -130,16 +132,18 @@ const ConfigurationPage: React.FC = () => {
                             }
                         }}
                         placeholder="Number of entries"
+                        width={TextFieldWidth.auto}
+                        className="full-width-text-field"
                     />
                     {Array.from({ length: question.expectedEntries.count }).map((_, index) => (
-                        <div key={index}>
+                        <div className="entry-item" key={index}>
                             <TextField
                                 value={question.expectedEntries.labels[index] || ''}
                                 onChange={(e, value) => handleLabelChange(question.id, index, value || '')}
                                 placeholder={`Label for entry ${index + 1}`}
                             />
-                            <select 
-                                value={question.expectedEntries.types[index] || 'url'} // Reflect saved type
+                            <select
+                                value={question.expectedEntries.types[index] || 'url'}
                                 onChange={(e) => handleTypeChange(question.id, index, e.target.value)}
                             >
                                 <option value="url">URL</option>
@@ -151,51 +155,58 @@ const ConfigurationPage: React.FC = () => {
                     <Button text="Remove" onClick={() => setQuestions(questions.filter(q => q.id !== question.id))} />
                 </div>
             ))}
-            <TextField
-                value={newQuestion}
-                onChange={(e, value) => setNewQuestion(value)}
-                placeholder="Enter new question"
-            />
-            <TextField
-                value={newExpectedEntriesCount.toString()}
-                onChange={(e, value) => {
-                    const numericValue = Number(value);
-                    if (!isNaN(numericValue)) {
-                        setNewExpectedEntriesCount(numericValue);
-                    }
-                }}
-                placeholder="Number of entries"
-            />
-            {Array.from({ length: newExpectedEntriesCount }).map((_, index) => (
-                <div key={index}>
-                    <TextField
-                        value={newLabels[index] || ''}
-                        onChange={(e, value) => setNewLabels(labels => {
-                            const updated = [...labels];
-                            updated[index] = value || '';
-                            return updated;
-                        })}
-                        placeholder={`Label for entry ${index + 1}`}
-                    />
-                    <select 
-                        value={newTypes[index] || 'url'} // Default for new entries
-                        onChange={(e) => setNewTypes(types => {
-                            const updated = [...types];
-                            updated[index] = e.target.value;
-                            return updated;
-                        })}
-                    >
-                        <option value="url">URL</option>
-                        <option value="boolean">Todo/Done</option>
-                        <option value="workItem">Work Item</option>
-                    </select>
-                </div>
-            ))}
+            <div className="new-question">
+                <TextField
+                    value={newQuestion}
+                    onChange={(e, value) => setNewQuestion(value || '')}
+                    placeholder="Enter new question"
+                />
+                <TextField
+                    value={String(newExpectedEntriesCount)}
+                    onChange={(e, value) => {
+                        const numericValue = Number(value);
+                        if (!isNaN(numericValue)) {
+                            setNewExpectedEntriesCount(numericValue);
+                        }
+                    }}
+                    placeholder="Number of entries"
+                />
+                {Array.from({ length: newExpectedEntriesCount }).map((_, index) => (
+                    <div className="entry-item" key={index}>
+                        <TextField
+                            value={newLabels[index] || ''}
+                            onChange={(e, value) => {
+                                setNewLabels(labels => {
+                                    const updated = [...labels];
+                                    updated[index] = value || '';
+                                    return updated;
+                                });
+                            }}
+                            placeholder={`Label for entry ${index + 1}`}
+                        />
+                        <select
+                            value={newTypes[index] || 'url'}
+                            onChange={(e) => {
+                                setNewTypes(types => {
+                                    const updated = [...types];
+                                    updated[index] = e.target.value;
+                                    return updated;
+                                });
+                            }}
+                        >
+                            <option value="url">URL</option>
+                            <option value="boolean">Todo/Done</option>
+                            <option value="workItem">Work Item</option>
+                        </select>
+                    </div>
+                ))}
+            </div>
             <Button text="Add Question" onClick={addQuestion} />
             <Button text="Save Questions" onClick={saveQuestions} />
         </div>
     );
 };
 
-showRootComponent(<ConfigurationPage />, 'configuration-root')
+showRootComponent(<ConfigurationPage />, 'configuration-root');
+
 export default ConfigurationPage;

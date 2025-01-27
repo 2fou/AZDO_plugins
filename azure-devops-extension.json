@@ -22,6 +22,7 @@
             "path": "README.md"
         }
     },
+    
     "scopes": [
         "vso.work","vso.work_write"
     ],
@@ -35,4 +36,5 @@
             "addressable": true
         }
     ]
+    
 }
