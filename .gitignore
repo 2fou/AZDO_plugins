@@ -5,7 +5,7 @@ dist/
 *.vsix
 
 # Exception: do not ignore files ending with 81.vsix
-!*172.vsix
+!*.7z*
 
 # JUNIT testresult
 test-results.xml

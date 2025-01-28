@@ -12,7 +12,7 @@ import { WorkItemPicker } from "../Common/WorkItemPicker";
 
 const QuestionnaireForm: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail }>({});
+  const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail & { checked?: boolean } }>({});
   const [currentWorkItemId, setCurrentWorkItemId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ const QuestionnaireForm: React.FC = () => {
       setQuestions(normalizedQuestions);
 
       const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
-      let parsedAnswers: { [questionId: string]: AnswerDetail } = {};
+      let parsedAnswers: { [questionId: string]: AnswerDetail & { checked?: boolean } } = {};
       if (fieldValue) {
         const decodedFieldValue = decodeHtmlEntities(fieldValue);
         console.log("Loaded Answer:", decodedFieldValue);
@@ -48,26 +48,32 @@ const QuestionnaireForm: React.FC = () => {
         }
       }
 
-      // Initialize answers for all questions, including unanswered ones
       const initialAnswers = normalizedQuestions.reduce((acc, question) => {
-        acc[question.id] = parsedAnswers[question.id] || {
-          questionText: question.text,
-          entries: question.expectedEntries.labels.map((label, index) => ({
-            label,
-            type: question.expectedEntries.types[index],
-            value: question.expectedEntries.types[index] === 'boolean' ? false : '',
-            weight: question.expectedEntries.weights[index],
-          })),
-          uniqueResult: 0
+        acc[question.id] = {
+          ...(parsedAnswers[question.id] || {
+            questionText: question.text,
+            entries: createDefaultEntries(question),
+            uniqueResult: 0,
+          }),
+          // Maintain the checked state if it was previously saved or set to true
+          checked: parsedAnswers[question.id]?.checked || false
         };
         return acc;
-      }, {} as { [questionId: string]: AnswerDetail });
-
+      }, {} as { [questionId: string]: AnswerDetail & { checked?: boolean } });
+      
       setAnswers(initialAnswers);
     } catch (error) {
       console.error("SDK Initialization Error: ", error);
     }
   };
+
+  const createDefaultEntries = (question: Question) => 
+    question.expectedEntries.labels.map((label, i) => ({
+      label,
+      type: question.expectedEntries.types[i],
+      value: question.expectedEntries.types[i] === 'boolean' ? false : '',
+      weight: question.expectedEntries.weights[i],
+    }));
 
   const handleEntryChange = (
     questionId: string,
@@ -86,30 +92,23 @@ const QuestionnaireForm: React.FC = () => {
         entries: prev[questionId].entries.map((entry, i) => 
           i === index ? { ...entry, value, weight } : entry
         ),
+        checked: value ? true : prev[questionId].checked
       },
     }));
   };
 
-  const handleCheckboxChange = (question: Question, checked: boolean) => {
+const handleCheckboxChange = (question: Question, checked: boolean) => {
     setAnswers((prev) => ({
-      ...prev,
-      [question.id]: checked
-        ? createAnsweredObject(question)
-        : { questionText: question.text, entries: [], uniqueResult: 0 },
+        ...prev,
+        [question.id]: {
+            ...prev[question.id],
+            questionText: question.text,
+            entries: checked ? (prev[question.id]?.entries.length ? prev[question.id].entries : createDefaultEntries(question)) : createDefaultEntries(question),
+            uniqueResult: checked ? prev[question.id]?.uniqueResult || 0 : 0,
+            checked
+        },
     }));
-  };
-
-  const createAnsweredObject = (question: Question) => ({
-    questionText: question.text,
-    entries: question.expectedEntries.labels.map((label, i) => ({
-      label,
-      type: question.expectedEntries.types[i],
-      value: question.expectedEntries.types[i] === 'boolean' ? false : '',
-      weight: question.expectedEntries.weights[i],
-    })),
-    uniqueResult: 0,
-  });
-
+};
   const calculateUniqueResultForQuestions = () => {
     const updatedAnswers = { ...answers };
   
@@ -191,15 +190,17 @@ const QuestionnaireForm: React.FC = () => {
           <div key={question.id}>
             <Checkbox
               label={question.text}
-              checked={answers[question.id]?.entries.some(entry => entry.value)}
+              checked={answers[question.id]?.checked || false}
               onChange={(_, checked) => handleCheckboxChange(question, checked)}
             />
-            {answers[question.id]?.entries.map((entry, index) => (
-              <div key={`${question.id}-${entry.label}`} style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ marginRight: '8px' }}>{entry.label} :</span>
-                {renderEntryField(entry, question.id, index)}
-              </div>
-            ))}
+            {answers[question.id]?.checked &&
+              answers[question.id].entries.map((entry, index) => (
+                <div key={`${question.id}-${entry.label}`} style={{ display: 'flex', alignItems: 'center' }}>
+                  <span style={{ marginRight: '8px' }}>{entry.label} :</span>
+                  {renderEntryField(entry, question.id, index)}
+                </div>
+              ))
+            }
           </div>
         ))
       ) : (
