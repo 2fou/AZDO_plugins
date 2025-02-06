@@ -30,8 +30,8 @@ export interface AnswerDetail {
   questionText: string;
   entries: EntryDetail[];
   uniqueResult?: number; // Unique result per question
+  totalWeight?: number;  // Add this line
 }
-
 export const normalizeQuestions = (loadedQuestions: any[]): Question[] => {
   return loadedQuestions.map(question => ({
     id: question.id || "",

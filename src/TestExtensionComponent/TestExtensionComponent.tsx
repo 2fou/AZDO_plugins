@@ -2,7 +2,6 @@ import "./testExtensionComponent.scss";
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
-import { Button } from 'azure-devops-ui/Button';
 import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from "azure-devops-extension-api";
@@ -14,6 +13,7 @@ const QuestionnaireForm: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail & { checked?: boolean } }>({});
   const [currentWorkItemId, setCurrentWorkItemId] = useState<string | null>(null);
+  const [workItemFormService, setWorkItemFormService] = useState<IWorkItemFormService | null>(null);
 
   useEffect(() => {
     initializeSDK();
@@ -24,8 +24,10 @@ const QuestionnaireForm: React.FC = () => {
     await SDK.init();
 
     try {
-      const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-      const workItemId = await workItemFormService.getId();
+      const wifService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
+      setWorkItemFormService(wifService);
+
+      const workItemId = await wifService.getId();
       setCurrentWorkItemId(workItemId.toString());
 
       const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
@@ -36,7 +38,7 @@ const QuestionnaireForm: React.FC = () => {
       const normalizedQuestions = normalizeQuestions(loadedQuestions);
       setQuestions(normalizedQuestions);
 
-      const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
+      const fieldValue = await wifService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
       let parsedAnswers: { [questionId: string]: AnswerDetail & { checked?: boolean } } = {};
       if (fieldValue) {
         const decodedFieldValue = decodeHtmlEntities(fieldValue);
@@ -55,19 +57,18 @@ const QuestionnaireForm: React.FC = () => {
             entries: createDefaultEntries(question),
             uniqueResult: 0,
           }),
-          // Maintain the checked state if it was previously saved or set to true
           checked: parsedAnswers[question.id]?.checked || false
         };
         return acc;
       }, {} as { [questionId: string]: AnswerDetail & { checked?: boolean } });
-      
+
       setAnswers(initialAnswers);
     } catch (error) {
       console.error("SDK Initialization Error: ", error);
     }
   };
 
-  const createDefaultEntries = (question: Question) => 
+  const createDefaultEntries = (question: Question) =>
     question.expectedEntries.labels.map((label, i) => ({
       label,
       type: question.expectedEntries.types[i],
@@ -75,75 +76,49 @@ const QuestionnaireForm: React.FC = () => {
       weight: question.expectedEntries.weights[i],
     }));
 
-  const handleEntryChange = (
-    questionId: string,
-    index: number,
-    label: string,
-    value: string | boolean,
-    type: string
-  ) => {
-    const question = questions.find(q => q.id === questionId);
-    const weight = question ? question.expectedEntries.weights[index] : 1;
-
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: {
-        ...prev[questionId],
-        entries: prev[questionId].entries.map((entry, i) => 
-          i === index ? { ...entry, value, weight } : entry
-        ),
-        checked: value ? true : prev[questionId].checked
-      },
-    }));
-  };
-
-const handleCheckboxChange = (question: Question, checked: boolean) => {
-    setAnswers((prev) => ({
-        ...prev,
-        [question.id]: {
-            ...prev[question.id],
-            questionText: question.text,
-            entries: checked ? (prev[question.id]?.entries.length ? prev[question.id].entries : createDefaultEntries(question)) : createDefaultEntries(question),
-            uniqueResult: checked ? prev[question.id]?.uniqueResult || 0 : 0,
-            checked
-        },
-    }));
-};
-  const calculateUniqueResultForQuestions = () => {
-    const updatedAnswers = { ...answers };
-  
+  const calculateUniqueResultForQuestions = (answersToCalculate: typeof answers) => {
+    const updatedAnswers = { ...answersToCalculate };
     questions.forEach((question) => {
       const answerDetail = updatedAnswers[question.id] || { entries: [] };
-      const entryTotal = answerDetail.entries.reduce((entrySum, entry) => {
-        if (entry.value) {
-          return entrySum + entry.weight;
-        }
-        return entrySum;
-      }, 0);
-  
-      updatedAnswers[question.id] = {
-        ...answerDetail,
-        uniqueResult: entryTotal
-      };
+      const entryTotal = answerDetail.entries.reduce((sum, entry) => entry.value ? sum + entry.weight : sum, 0);
+      const totalWeight = answerDetail.entries.reduce((sum, entry) => sum + entry.weight, 0);
+      updatedAnswers[question.id] = { ...answerDetail, uniqueResult: entryTotal, totalWeight };
     });
-  
     return updatedAnswers;
   };
-  
-  const saveAnswersToWorkItemField = async () => {
-    if (!currentWorkItemId) return;
 
-    const updatedAnswers = calculateUniqueResultForQuestions();
-    console.log("Updated Answers with Unique Results:", updatedAnswers);
+  const handleEntryChange = (questionId: string, index: number, label: string, value: string | boolean, type: string) => {
+    setAnswers((prev) => {
+      const question = questions.find(q => q.id === questionId);
+      const weight = question ? question.expectedEntries.weights[index] : 1;
+      const newEntries = prev[questionId].entries.map((entry, i) =>
+        i === index ? { ...entry, value, weight } : entry
+      );
+      const newAnswer = { ...prev[questionId], entries: newEntries, checked: value ? true : prev[questionId].checked };
+      const newAnswers = { ...prev, [questionId]: newAnswer };
+      const updatedAnswers = calculateUniqueResultForQuestions(newAnswers);
 
-    try {
-      const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-      const serializedAnswers = JSON.stringify(updatedAnswers);
-      await workItemFormService.setFieldValue('Custom.AnswersField', serializedAnswers);
-      alert('Answers and unique results saved successfully to Work Item field!');
-    } catch (error) {
-      console.error('Error saving answers to Work Item field:', error);
-    }
+      if (workItemFormService) {
+        const serialized = JSON.stringify(updatedAnswers);
+        workItemFormService.setFieldValue('Custom.AnswersField', serialized);
+      }
+      return updatedAnswers;
+    });
+  };
+
+  const handleCheckboxChange = (question: Question, checked: boolean) => {
+    setAnswers((prev) => {
+      const entries = checked ? (prev[question.id]?.entries.length ? prev[question.id].entries : createDefaultEntries(question)) : createDefaultEntries(question);
+      const newAnswer = { ...prev[question.id], entries, uniqueResult: 0, checked };
+      const newAnswers = { ...prev, [question.id]: newAnswer };
+      const updatedAnswers = calculateUniqueResultForQuestions(newAnswers);
+
+      if (workItemFormService) {
+        const serialized = JSON.stringify(updatedAnswers);
+        workItemFormService.setFieldValue('Custom.AnswersField', serialized);
+      }
+      return updatedAnswers;
+    });
   };
 
   const renderEntryField = (entry: EntryDetail, questionId: string, index: number) => {
@@ -186,27 +161,33 @@ const handleCheckboxChange = (question: Question, checked: boolean) => {
   return (
     <div>
       {questions.length > 0 ? (
-        questions.map((question) => (
-          <div key={question.id}>
-            <Checkbox
-              label={question.text}
-              checked={answers[question.id]?.checked || false}
-              onChange={(_, checked) => handleCheckboxChange(question, checked)}
-            />
-            {answers[question.id]?.checked &&
-              answers[question.id].entries.map((entry, index) => (
-                <div key={`${question.id}-${entry.label}`} style={{ display: 'flex', alignItems: 'center' }}>
-                  <span style={{ marginRight: '8px' }}>{entry.label} :</span>
-                  {renderEntryField(entry, question.id, index)}
-                </div>
-              ))
-            }
-          </div>
-        ))
+        questions.map((question) => {
+          const answerDetail = answers[question.id];
+          return (
+            <div key={question.id}>
+              <Checkbox
+                label={question.text}
+                checked={answerDetail?.checked || false}
+                onChange={(_, checked) => handleCheckboxChange(question, checked)}
+              />
+              {answerDetail?.checked &&
+                <>
+                  {answerDetail.entries.map((entry, index) => (
+                    <div key={`${question.id}-${entry.label}`} style={{ display: 'flex', alignItems: 'center' }}>
+                      <span style={{ marginRight: '8px' }}>{entry.label} :</span>
+                      {renderEntryField(entry, question.id, index)}
+                    </div>
+                  ))}
+                  <div>Total Weight: {answerDetail.totalWeight}</div>
+                  <div>Unique Result: {answerDetail.uniqueResult}</div>
+                </>
+              }
+            </div>
+          );
+        })
       ) : (
         <div>No questions available.</div>
       )}
-      <Button text="Save Answers" onClick={saveAnswersToWorkItemField} />
     </div>
   );
 };

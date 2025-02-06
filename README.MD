@@ -33,6 +33,7 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
 
    ```bash
    npm install
+   npm install -g tfx-cli
    ```
 
 3. **Build the Project:**
@@ -42,6 +43,8 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
    ```bash
    npm run compile
    ```
+
+   
 
 4. **Package the Extension:**
 
@@ -92,6 +95,7 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
    - tfx extension publish --manifest-globs azure-devops-extension.json --overrides-file configs/dev.json  --token xxxx
 - npx webpack serve
 - From AzureDev you resources are now local to your development environment
+- https://localhost:3000/dist/TestConfigurationPage/TestConfigurationPage.html
 
 ## Run (classic)
 

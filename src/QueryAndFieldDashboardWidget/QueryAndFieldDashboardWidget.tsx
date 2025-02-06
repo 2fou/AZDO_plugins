@@ -11,6 +11,7 @@ interface WorkItemProgress {
     progress: number;
     completed: number;
     total: number;
+    status: string; // Added for filtering purposes
 }
 
 interface IState {
@@ -18,6 +19,8 @@ interface IState {
     loading: boolean;
     error: string | null;
     workItemsProgress: WorkItemProgress[];
+    filterStatus: string | null;
+    availableStatuses: string[]; // New state for holding dynamic statuses
 }
 
 interface IWidgetSettings {
@@ -33,7 +36,9 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             title: '',
             loading: true,
             error: null,
-            workItemsProgress: []
+            workItemsProgress: [],
+            filterStatus: null,
+            availableStatuses: [] // Initialize an empty array for statuses
         };
     }
 
@@ -46,7 +51,8 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
     }
 
     render(): JSX.Element {
-        const { title, loading, error, workItemsProgress } = this.state;
+        const { title, loading, error, workItemsProgress, filterStatus, availableStatuses } = this.state;
+
         if (loading) {
             return <div>Loading work item progress...</div>;
         }
@@ -58,22 +64,39 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         return (
             <div>
                 <h3>{title || "Work Item Progress"}</h3>
-                {workItemsProgress.map(({ id, title, progress, completed, total }) => (
-                    <div key={id}>
-                        <h4>{title}</h4>
-                        <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
-                            <div
-                                style={{
-                                    width: `${progress}%`,
-                                    backgroundColor: '#76c7c0',
-                                    height: '24px',
-                                    borderRadius: '8px'
-                                }}
-                            />
-                        </div>
-                        <div>{`Work Item ID: ${id}, Progress: ${progress.toFixed(2)}%, Completed ${completed} out of ${total}`}</div>
-                    </div>
-                ))}
+                <label htmlFor="statusFilter">Filter by Status: </label>
+                <select 
+                    id="statusFilter"
+                    value={filterStatus || ""}
+                    onChange={(e) => this.setState({ filterStatus: e.target.value })}
+                >
+                    <option value="">All Statuses</option>
+                    {availableStatuses.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                    ))}
+                </select>
+                {workItemsProgress.length === 0 ? (
+                    <div>No work items to display.</div>
+                ) : (
+                    workItemsProgress
+                        .filter(item => !filterStatus || item.status === filterStatus)
+                        .map(({ id, title, progress, completed, total }) => (
+                            <div key={id}>
+                                <h4>{title}</h4>
+                                <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
+                                    <div
+                                        style={{
+                                            width: `${progress}%`,
+                                            backgroundColor: '#76c7c0',
+                                            height: '24px',
+                                            borderRadius: '8px'
+                                        }}
+                                    />
+                                </div>
+                                <div>{`Work Item ID: ${id}, Progress: ${progress.toFixed(2)}%, Completed ${completed} out of ${total}`}</div>
+                            </div>
+                        ))
+                )}
             </div>
         );
     }
@@ -106,13 +129,11 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             title: widgetSettings.name || 'Default Title',
         });
 
-        const customData: IWidgetSettings = JSON.parse(widgetSettings.customSettings.data || '{}');
-        console.log("Custom settings data:", customData);
-
         try {
             const projectInfo = await this.fetchProjectInfo();
             if (projectInfo) {
                 console.log("Project info fetched:", projectInfo);
+                await this.fetchAvailableStatuses(projectInfo.id); // Fetch statuses first
                 await this.fetchAndProcessWorkItems(projectInfo.id);
             } else {
                 console.warn("No project info found.");
@@ -137,20 +158,39 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         }
     }
 
+    private async fetchAvailableStatuses(projectId: string) {
+        try {
+            const client = getClient(WorkItemTrackingRestClient);
+            const workItemTypes = await client.getWorkItemTypes(projectId);
+
+            const allStates: Set<string> = new Set();
+
+            for (const type of workItemTypes) {
+                const states = await client.getWorkItemTypeStates(projectId, type.name);
+                states.forEach(state => allStates.add(state.name));
+            }
+
+            this.setState({ availableStatuses: Array.from(allStates) });
+            console.log("Fetched statuses:", Array.from(allStates));
+        } catch (error) {
+            console.error("Error fetching available statuses:", error);
+        }
+    }
+
     private async fetchAndProcessWorkItems(projectId: string) {
         try {
             const client = getClient(WorkItemTrackingRestClient);
             console.log("Fetching work items...");
             const wiqlQuery = {
-                query: `SELECT [System.Id], [System.Title], [Custom.AnswersField] FROM WorkItems WHERE [System.TeamProject] = @project AND [Custom.AnswersField] Is Not Empty ORDER BY [System.Id]`,
+                query: `SELECT [System.Id], [System.Title], [Custom.AnswersField], [System.State] FROM WorkItems WHERE [System.TeamProject] = @project AND [Custom.AnswersField] Is Not Empty ORDER BY [System.Id]`,
                 parameters: { project: projectId }
-            };            
+            };
             const queryResult = await client.queryByWiql(wiqlQuery, projectId);
             const workItemRefs = queryResult.workItems;
             console.log("Number of work item references:", workItemRefs.length);
 
             if (workItemRefs.length > 0) {
-                const workItems = await client.getWorkItems(workItemRefs.map(wi => wi.id), undefined, ['System.Title', 'Custom.AnswersField']);
+                const workItems = await client.getWorkItems(workItemRefs.map(wi => wi.id), undefined, ['System.Title', 'Custom.AnswersField', 'System.State']);
                 console.log(`Fetched ${workItems.length} work items.`);
                 const progressData = workItems.map(this.mapWorkItemToProgress);
                 this.setState({ workItemsProgress: progressData });
@@ -162,51 +202,55 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         }
     }
 
-private mapWorkItemToProgress(workItem: WorkItem): WorkItemProgress {
-    try {
-        const fieldData = workItem.fields['Custom.AnswersField'];
-        if (fieldData) {
-            const decodedValue = decodeHtmlEntities(fieldData as string);
-            const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
+    private mapWorkItemToProgress(workItem: WorkItem): WorkItemProgress {
+        try {
+            const fieldData = workItem.fields['Custom.AnswersField'];
+            const status = workItem.fields['System.State']; // Extract status for filtering
 
-            const totalEntries = Object.keys(answers).length;
-            let completedEntriesCount = 0;
+            if (fieldData) {
+                const decodedValue = decodeHtmlEntities(fieldData as string);
+                const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
 
-            // Iterate over each AnswerDetail
-            for (const answer of Object.values(answers)) {
-                if (answer.entries && answer.entries.length > 0) {
-                    // If there are entries, check if all are non-empty
-                    if (answer.entries.every(entry => Boolean(entry.value))) {
-                        completedEntriesCount += 1;
+                const totalEntries = Object.keys(answers).length;
+                let completedEntriesCount = 0;
+
+                // Iterate over each AnswerDetail
+                for (const answer of Object.values(answers)) {
+                    if (answer.entries && answer.entries.length > 0) {
+                        // If there are entries, check if all are non-empty
+                        if (answer.entries.every(entry => Boolean(entry.value))) {
+                            completedEntriesCount += 1;
+                        }
                     }
                 }
+
+                const progress = totalEntries > 0 ? (completedEntriesCount / totalEntries) * 100 : 0;
+
+                console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
+                return {
+                    id: workItem.id,
+                    title: workItem.fields['System.Title'] || "Untitled",
+                    progress,
+                    completed: completedEntriesCount,
+                    total: totalEntries,
+                    status // Include status in the returned object
+                };
+            } else {
+                console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
             }
-
-            const progress = totalEntries > 0 ? (completedEntriesCount / totalEntries) * 100 : 0;
-
-            console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
-            return {
-                id: workItem.id,
-                title: workItem.fields['System.Title'] || "Untitled",
-                progress,
-                completed: completedEntriesCount,
-                total: totalEntries
-            };
-        } else {
-            console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
+        } catch (parseError) {
+            console.error("Error parsing field data:", parseError);
         }
-    } catch (parseError) {
-        console.error("Error parsing field data:", parseError);
-    }
 
-    return {
-        id: workItem.id,
-        title: workItem.fields['System.Title'] || "Untitled",
-        progress: 0,
-        completed: 0,
-        total: 0
-    };
-}
+        return {
+            id: workItem.id,
+            title: workItem.fields['System.Title'] || "Untitled",
+            progress: 0,
+            completed: 0,
+            total: 0,
+            status: "" // Default or fallback value
+        };
+    }
 }
 
 showRootComponent(<QueryAndFieldDashboardWidget />, "query-and-field-dashboard-root");

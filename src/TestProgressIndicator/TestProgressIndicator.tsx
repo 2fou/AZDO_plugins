@@ -19,20 +19,30 @@ const ProgressIndicator: React.FC = () => {
                 setLoading(true);
                 await SDK.ready();
                 const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-                const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true });
-                if (fieldValue) {
-                    try {
-                        const decodedValue = decodeHtmlEntities(fieldValue as string);
-                        const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
 
-                        const progressData = Object.values(answers).map(mapAnswerToProgress);
+                const loadProgress = async () => {
+                    const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true });
+                    if (fieldValue) {
+                        try {
+                            const decodedValue = decodeHtmlEntities(fieldValue as string);
+                            const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
 
-                        setQuestionsProgress(progressData);
-                    } catch (parseError) {
-                        console.error("Error parsing answers:", parseError);
-                        setError("Error parsing answers.");
+                            const progressData = Object.values(answers).map(mapAnswerToProgress);
+
+                            setQuestionsProgress(progressData);
+                        } catch (parseError) {
+                            console.error("Error parsing answers:", parseError);
+                            setError("Error parsing answers.");
+                        }
                     }
-                }
+                };
+
+                await loadProgress();
+                // Register an event listener for when the work item is changed
+                SDK.register(SDK.getContributionId(), async () => {
+                    await loadProgress();
+                });
+
             } catch (error) {
                 console.error("Error initializing component:", error);
                 setError("Failed to initialize component.");
@@ -42,8 +52,7 @@ const ProgressIndicator: React.FC = () => {
         };
 
         initializeSDK();
-    }, []);
-
+    }, []); // Only run once on component mount
     const mapAnswerToProgress = (answer: AnswerDetail) => {
         if (!answer.entries) {
             console.error(`Missing entries for question ${answer.questionText}`);
