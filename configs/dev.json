@@ -2,7 +2,7 @@
   "baseUri": "https://localhost:3000",
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.178",
+  "version": "1.0.192",
   "contributions": [
     {
       "id": "configuration",
@@ -56,15 +56,14 @@
     {
       "id": "create-workitems-contribution",
       "type": "ms.vss-web.action",
-      "description": "Button to create configured work items",
       "targets": [
-        "ms.vss-work-web.work-item-toolbar-menu",
+        "ms.vss-work-web.work-item-toolbar-menu", 
         "ms.vss-work-web.backlog-item-menu",
         "ms.vss-work-web.work-item-context-menu"
       ],
       "properties": {
-        "text": "Create Work Items",
-        "icon": "dist/img/create.png",
+        "text": "Create Hierarchy",
+        "registeredObjectId": "createHierarchy",
         "uri": "dist/CreateWorkItemsComponent/CreateWorkItemsComponent.html"
       }
     },
