@@ -1,7 +1,7 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.193",
+  "version": "1.0.194",
   "contributions": [
     {
       "id": "configuration",

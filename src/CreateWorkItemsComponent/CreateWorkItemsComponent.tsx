@@ -50,6 +50,9 @@ const CreateWorkItemsComponent: React.FC = () => {
         setOrgUrl(retrievedOrgUrl);
         setIsInitialized(true);
         console.log("SDK initialization complete with config:", savedConfig);
+        // Register the event handler immediately after initialization.
+        SDK.register("createHierarchy", handleCreate);
+        console.log("Event handler registered.");
 
       } catch (err) {
         console.error("Initialization error:", err);
@@ -62,12 +65,6 @@ const CreateWorkItemsComponent: React.FC = () => {
     initializeSDK();
   }, []);
 
-  useEffect(() => {
-    if (isInitialized) {
-      SDK.register("createHierarchy", handleCreate);
-      console.log("Event handler registered after initialization");
-    }
-  }, [isInitialized]);
 
   const createWorkItem = async (
     type: string,
@@ -96,10 +93,13 @@ const CreateWorkItemsComponent: React.FC = () => {
 
     const projectService = await SDK.getService<IProjectPageService>(CommonServiceIds.ProjectPageService);
     const project = await projectService.getProject();
+    if (!project) {
+      throw new Error("Project is not available.");
+    }
 
     return client.createWorkItem(
       patchDoc,
-      project!.id!,
+      project.id,
       type,
       false,
       false
