@@ -1,7 +1,7 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.194",
+  "version": "1.0.213",
   "contributions": [
     {
       "id": "configuration",
@@ -56,17 +56,18 @@
       "id": "create-workitems-contribution",
       "type": "ms.vss-web.action",
       "targets": [
-        "ms.vss-work-web.work-item-toolbar-menu",
-        "ms.vss-work-web.backlog-item-menu",
-        "ms.vss-work-web.work-item-context-menu"
+        "ms.vss-work-web.work-item-toolbar-menu"
       ],
       "properties": {
+        "registeredObjectId":"createHierarchy",
         "text": "Create Hierarchy",
+        "group": "actions",
         "uri": "dist/CreateWorkItemsComponent/CreateWorkItemsComponent.html",
-        "registeredObjectId": "createHierarchy",
-        "supportedWorkItemTypes": [
-          "Epic"
-        ]
+        "toolbarText": "Custom action for creating work items children",
+        "icon": {
+          "light": "dist/img/create-hierarchy.png",
+          "dark": "dist/img/create-hierarchy.png"
+        }
       }
     },
     {
@@ -77,6 +78,7 @@
         "ms.vss-dashboards-web.widget-catalog"
       ],
       "properties": {
+        "registeredObjectId": "work-item-toolbar-menu",
         "name": "Query and Field Dashboard Widget",
         "uri": "dist/QueryAndFieldDashboardWidget/QueryAndFieldDashboardWidget.html",
         "description": "Risk Profile Matrice",
