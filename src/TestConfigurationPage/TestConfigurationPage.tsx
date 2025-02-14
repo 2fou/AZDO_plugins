@@ -1,6 +1,6 @@
 import './TestConfigurationPage.scss';
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { Button } from 'azure-devops-ui/Button';
 import { TextField, TextFieldWidth } from 'azure-devops-ui/TextField';
@@ -32,21 +32,27 @@ const ConfigurationPage: React.FC = () => {
         setQuestions(latestVersion);
     };
 
-    const saveNewVersionOfQuestions = async () => {
+    const saveNewVersionOfQuestions = async (updatedQuestions: Question[]) => {
         try {
             const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
             const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
             const questionVersions = await dataManager.getValue<Question[][]>('questionVersions', { scopeType: 'Default' }) || [];
-            questionVersions.push([...questions]); // Save a new version
+
+            // Push the updated questions instead of the current state
+            questionVersions.push([...updatedQuestions]);
             await dataManager.setValue('questionVersions', questionVersions, { scopeType: 'Default' });
 
-            alert('Questions saved successfully as a new version!');
-            loadCurrentQuestions(); // Reload the latest questions after saving
+            // Reload the latest questions after saving
+            await loadCurrentQuestions();
         } catch (err) {
             console.error('Failed to save questions:', err);
             setError('Failed to save questions.');
         }
+    };
+
+    const validateQuestions = (questions: Question[]): boolean => {
+        return Array.isArray(questions) && questions.every(q => q.id && q.text && q.expectedEntries);
     };
 
     const addQuestion = () => {
@@ -75,7 +81,7 @@ const ConfigurationPage: React.FC = () => {
         setQuestions(questions.map(q =>
             q.id === questionId ? { ...q, text: newText } : q
         ));
-    }
+    };
 
     const handleLabelChange = (questionId: string, index: number, newLabel: string) => {
         setQuestions(questions.map(q =>
@@ -101,9 +107,63 @@ const ConfigurationPage: React.FC = () => {
         ));
     };
 
+    const downloadQuestionnaireJson = () => {
+        const json = JSON.stringify(questions, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'questionnaire.json'; // Download filename
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url); // Clean up the URL
+    };
+
+    const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+        event.persist(); // Ensure the event can be accessed asynchronously
+
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const result = e.target?.result;
+                    const loadedQuestions = JSON.parse(result as string) as Question[];
+
+                    // Display a validation alert if necessary
+                    if (!validateQuestions(loadedQuestions)) {
+                        alert('Invalid questionnaire format');
+                        return;
+                    }
+
+                    // Correctly update the questions state with the uploaded data
+                    setQuestions(loadedQuestions);
+
+                    // Save as a new version using the updated questions state
+                    await saveNewVersionOfQuestions(loadedQuestions);
+
+                    alert('Questionnaire uploaded and saved as a new version successfully!');
+
+                } catch (error) {
+                    console.error('Error reading or parsing JSON file:', error);
+                    alert('Failed to load and parse the JSON file');
+                } finally {
+                    event.target.value = ''; // Clear the file input
+                }
+            };
+            reader.readAsText(file);
+        }
+    };
+
     return (
         <div className="configuration-container">
             <h2>Questionnaire Configuration</h2>
+
+            <input type="file" accept="application/json" onChange={handleFileUpload} />
+            <Button text="Download JSON" onClick={downloadQuestionnaireJson} />
+
             {questions.map(question => (
                 <div className="question-item" key={question.id}>
                     <TextField
@@ -135,6 +195,7 @@ const ConfigurationPage: React.FC = () => {
                     <Button text="Remove" onClick={() => setQuestions(questions.filter(q => q.id !== question.id))} />
                 </div>
             ))}
+
             <div className="new-question">
                 <TextField
                     value={newQuestion}
@@ -182,7 +243,11 @@ const ConfigurationPage: React.FC = () => {
                 ))}
             </div>
             <Button text="Add Question" onClick={addQuestion} />
-            <Button text="Save Questions" onClick={saveNewVersionOfQuestions} />
+            <Button
+                text="Save Questions"
+                onClick={() => saveNewVersionOfQuestions(questions)}
+            />
+
         </div>
     );
 };

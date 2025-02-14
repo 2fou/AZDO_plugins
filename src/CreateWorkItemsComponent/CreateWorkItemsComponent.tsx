@@ -120,27 +120,56 @@ SDK.register("createHierarchy", () => {
                 const currentItemId = await workItemService.getId();
                 console.log('Current item type %s id %d', currentWorkItemType, currentItemId);
 
-                switch (currentWorkItemType) {
-                    case config.workItemTypes.epic:
-                        console.log('Current item is an Epic.');
-                        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.feature, config.workItemTypes.story);
-                        break;
+switch (currentWorkItemType) {
+    case config.workItemTypes.epic: {
+        console.log('Current item is an Epic.');
 
-                    case config.workItemTypes.feature:
-                        console.log('Current item is a Feature.');
-                        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.story, config.workItemTypes.task);
-                        break;
+        // Create a Feature under the Epic
+        const featureItem = await createWorkItem(orgUrl, {
+            type: config.workItemTypes.feature,
+            title: config.featureTitle,
+            parentId: currentItemId
+        });
 
-                    case config.workItemTypes.story:
-                        console.log('Current item is a Story.');
-                        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.task);
-                        break;
+        console.log(`Feature "${config.featureTitle}" created:`, featureItem.id);
 
-                    default:
-                        alert('Creation is only allowed from Epics, Features, or User Stories.');
-                        break;
-                }
+        // For each story, create a story under the feature and tasks under each story
+        for (const storyConfig of config.stories) {
+            const storyItem = await createWorkItem(orgUrl, {
+                type: config.workItemTypes.story,
+                title: storyConfig.title,
+                parentId: featureItem.id
+            });
+            console.log(`Story "${storyConfig.title}" created:`, storyItem.id);
 
+            for (const taskTitle of storyConfig.tasks) {
+                const taskItem = await createWorkItem(orgUrl, {
+                    type: config.workItemTypes.task,
+                    title: taskTitle,
+                    parentId: storyItem.id
+                });
+                console.log(`Task "${taskTitle}" created:`, taskItem.id);
+            }
+        }
+        break;
+    }
+
+    case config.workItemTypes.feature: {
+        console.log('Current item is a Feature.');
+        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.story, config.workItemTypes.task);
+        break;
+    }
+
+    case config.workItemTypes.story: {
+        console.log('Current item is a Story.');
+        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.task);
+        break;
+    }
+
+    default:
+        alert('Creation is only allowed from Epics, Features, or User Stories.');
+        break;
+}
                 // Check if the form is dirty before saving
                 const shouldSave = await checkIfFormIsDirty(workItemService);
                 if (shouldSave) {

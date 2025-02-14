@@ -48,6 +48,7 @@ const SetupComponent: React.FC = () => {
                     if (!savedConfig.workItemTypes) {
                         savedConfig.workItemTypes = {
                             epic: 'Epic',
+                            
                             feature: 'Feature',
                             story: 'Product Backlog Item',
                             task: 'Task'
