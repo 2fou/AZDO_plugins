@@ -2,7 +2,7 @@
   "baseUri": "https://localhost:3000",
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.214",
+  "version": "1.0.216",
   "contributions": [
     {
       "id": "configuration",

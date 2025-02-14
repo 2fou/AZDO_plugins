@@ -2,7 +2,7 @@ import * as React from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { IProjectPageService, getClient, CommonServiceIds } from 'azure-devops-extension-api';
 import { WorkItemTrackingRestClient, WorkItem } from 'azure-devops-extension-api/WorkItemTracking';
-import { AnswerDetail, showRootComponent, decodeHtmlEntities } from '../Common/Common';
+import { showRootComponent, decodeHtmlEntities } from '../Common/Common';
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 
 interface WorkItemProgress {
@@ -27,6 +27,7 @@ interface IWidgetSettings {
     customSettings: {
         data: string;
     };
+
 }
 
 class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implements Dashboard.IConfigurableWidget {
@@ -40,6 +41,8 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             filterStatus: null,
             availableStatuses: [] // Initialize an empty array for statuses
         };
+        // Bind methods to ensure the proper `this` context
+        this.mapWorkItemToProgress = this.mapWorkItemToProgress.bind(this);
     }
 
     componentDidMount() {
@@ -65,7 +68,7 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             <div>
                 <h3>{title || "Work Item Progress"}</h3>
                 <label htmlFor="statusFilter">Filter by Status: </label>
-                <select 
+                <select
                     id="statusFilter"
                     value={filterStatus || ""}
                     onChange={(e) => this.setState({ filterStatus: e.target.value })}
@@ -202,54 +205,65 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         }
     }
 
-    private mapWorkItemToProgress(workItem: WorkItem): WorkItemProgress {
-        try {
-            const fieldData = workItem.fields['Custom.AnswersField'];
-            const status = workItem.fields['System.State']; // Extract status for filtering
+   private mapWorkItemToProgress = (workItem: WorkItem): WorkItemProgress => {
+    try {
+        const fieldData = workItem.fields['Custom.AnswersField'];
+        const status = workItem.fields['System.State'];
 
-            if (fieldData) {
-                const decodedValue = decodeHtmlEntities(fieldData as string);
-                const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
+        if (fieldData) {
+            const { completedEntriesCount, totalQuestionCount } = this.calculateProgress(fieldData);
+            const progress = totalQuestionCount > 0 ? (completedEntriesCount / totalQuestionCount) * 100 : 0;
 
-                const totalEntries = Object.keys(answers).length;
-                let completedEntriesCount = 0;
+            console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
+            return {
+                id: workItem.id,
+                title: workItem.fields['System.Title'] || "Untitled",
+                progress,
+                completed: completedEntriesCount,
+                total: totalQuestionCount,
+                status
+            };
+        } else {
+            console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
+        }
+    } catch (error) {
+        console.error("Error mapping work item to progress:", error);
+    }
 
-                // Iterate over each AnswerDetail
-                for (const answer of Object.values(answers)) {
-                    if (answer.entries && answer.entries.length > 0) {
-                        // If there are entries, check if all are non-empty
-                        if (answer.entries.every(entry => Boolean(entry.value))) {
-                            completedEntriesCount += 1;
-                        }
-                    }
-                }
+    return {
+        id: workItem.id,
+        title: workItem.fields['System.Title'] || "Untitled",
+        progress: 0,
+        completed: 0,
+        total: 0,
+        status: status || "Unknown"
+    };
+};
+    private calculateProgress(fieldData: any): { completedEntriesCount: number, totalQuestionCount: number } {
+        const decodedValue = decodeHtmlEntities(fieldData as string);
+        const answers = JSON.parse(decodedValue);
 
-                const progress = totalEntries > 0 ? (completedEntriesCount / totalEntries) * 100 : 0;
-
-                console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
-                return {
-                    id: workItem.id,
-                    title: workItem.fields['System.Title'] || "Untitled",
-                    progress,
-                    completed: completedEntriesCount,
-                    total: totalEntries,
-                    status // Include status in the returned object
-                };
-            } else {
-                console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
-            }
-        } catch (parseError) {
-            console.error("Error parsing field data:", parseError);
+        if (!answers?.data) {
+            throw new Error("Decoded answers are undefined or incorrectly structured.");
         }
 
-        return {
-            id: workItem.id,
-            title: workItem.fields['System.Title'] || "Untitled",
-            progress: 0,
-            completed: 0,
-            total: 0,
-            status: "" // Default or fallback value
-        };
+        let completedEntriesCount = 0;
+        let totalQuestionCount = 0;
+
+        // Iterate over each question in the "data" object
+        for (const answerKey in answers.data) {
+            const answer = answers.data[answerKey];
+
+            if (answer.checked) {
+                // Count the number of '1's in the binary representations of `uniqueResult` and `totalWeight`
+                completedEntriesCount = (answer.uniqueResult || 0).toString(2).split('1').length - 1;
+                totalQuestionCount = (answer.totalWeight || 0).toString(2).split('1').length - 1;
+
+                break; // Since only the checked entry determines the completeness
+            }
+        }
+
+        return { completedEntriesCount, totalQuestionCount };
     }
 }
 

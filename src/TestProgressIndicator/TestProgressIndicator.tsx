@@ -2,12 +2,12 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from 'azure-devops-extension-api/WorkItemTracking';
-import { AnswerDetail, showRootComponent, decodeHtmlEntities } from '../Common/Common';
+import { decodeHtmlEntities, AnswerData, AnswerDetail, showRootComponent } from '../Common/Common';
 
 const ProgressIndicator: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [questionsProgress, setQuestionsProgress] = useState<Array<{ questionText: string, progress: number, completed: number, total: number }>>([]);
+    const [questionsProgress, setQuestionsProgress] = useState<Array<{ questionText: string, progress: number }>>([]);
 
     useEffect(() => {
         const initializeSDK = async () => {
@@ -18,27 +18,40 @@ const ProgressIndicator: React.FC = () => {
             try {
                 setLoading(true);
                 await SDK.ready();
+                console.log("SDK Ready");
+
                 const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
+                console.log("WorkItemFormService obtained");
 
                 const loadProgress = async () => {
                     const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true });
+                    console.log("Field value obtained:", fieldValue);
+
                     if (fieldValue) {
                         try {
                             const decodedValue = decodeHtmlEntities(fieldValue as string);
-                            const answers: { [key: string]: AnswerDetail } = JSON.parse(decodedValue);
+                            console.log("Decoded value:", decodedValue);
 
-                            const progressData = Object.values(answers).map(mapAnswerToProgress);
+                            const data = JSON.parse(decodedValue);
 
+                            const answersData: AnswerData = data;
+
+                            const progressData = Object.entries(answersData.data)
+                                .map(([key, answer]) => mapAnswerToProgress(answer))
+                                .filter(({ progress }) => progress > 0);
+
+                            console.log("Filtered Progress data:", progressData);
                             setQuestionsProgress(progressData);
                         } catch (parseError) {
                             console.error("Error parsing answers:", parseError);
                             setError("Error parsing answers.");
                         }
+                    } else {
+                        setError("No field value found.");
                     }
                 };
 
                 await loadProgress();
-                // Register an event listener for when the work item is changed
                 SDK.register(SDK.getContributionId(), async () => {
                     await loadProgress();
                 });
@@ -52,28 +65,27 @@ const ProgressIndicator: React.FC = () => {
         };
 
         initializeSDK();
-    }, []); // Only run once on component mount
-    const mapAnswerToProgress = (answer: AnswerDetail) => {
-        if (!answer.entries) {
-            console.error(`Missing entries for question ${answer.questionText}`);
-            return {
-                questionText: answer.questionText,
-                progress: 0,
-                completed: 0,
-                total: 0,
-            };
-        }
+    }, []);
 
-        const totalEntries = answer.entries.length;
-        const completedEntries = answer.entries.filter(e => Boolean(e.value)).length;
-        const progress = totalEntries > 0 ? (completedEntries / totalEntries) * 100 : 0;
+    const mapAnswerToProgress = (answer: AnswerDetail) => {
+        const answeredQuestions = answer.uniqueResult ? answer.uniqueResult.toString(2).split('1').length - 1 : 0;
+        const totalBinaryWeight = answer.totalWeight ?? 0;
+
+        const totalQuestions = totalBinaryWeight.toString(2).split('1').length - 1;
+        const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+
+        // Use a label from the first entry as the question text or default to "Unknown"
+        const questionText = answer.entries.length > 0 ? answer.entries[0].label : 'Unknown Question';
 
         return {
-            questionText: answer.questionText,
-            progress,
-            completed: completedEntries,
-            total: totalEntries
+            questionText,
+            progress
         };
+    };
+
+    const calculateColor = (progress: number) => {
+        const hue = 120 * (progress / 100);  // Gradient from green to red
+        return `hsl(${hue}, 100%, 50%)`;
     };
 
     if (loading) {
@@ -86,21 +98,19 @@ const ProgressIndicator: React.FC = () => {
 
     return (
         <div>
-            <h3>Progress Indicator</h3>
-            {questionsProgress.map(({ questionText, progress, completed, total }, index) => (
-                <div key={questionText}>
-                    <h4>{questionText}</h4>
-                    <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
+            {questionsProgress.map(({ questionText, progress }) => (
+                <div key={questionText} style={{ marginBottom: '10px' }}>
+                    <span>{questionText}: {progress.toFixed(2)}%</span>
+                    <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px' }}>
                         <div
                             style={{
                                 width: `${progress}%`,
-                                backgroundColor: '#76c7c0',
+                                backgroundColor: calculateColor(progress),
                                 height: '24px',
                                 borderRadius: '8px'
                             }}
                         />
                     </div>
-                    <div>{`Completed ${completed} out of ${total}`}</div>
                 </div>
             ))}
         </div>

@@ -6,14 +6,14 @@ import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from "azure-devops-extension-api";
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from "azure-devops-extension-api/WorkItemTracking";
-import { showRootComponent, Question, EntryDetail, normalizeQuestions, AnswerDetail, decodeHtmlEntities } from '../Common/Common';
+import { showRootComponent, Question, EntryDetail, AnswerDetail, decodeHtmlEntities } from '../Common/Common';
 import { WorkItemPicker } from "../Common/WorkItemPicker";
 
 const QuestionnaireForm: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail & { checked?: boolean } }>({});
-  const [currentWorkItemId, setCurrentWorkItemId] = useState<string | null>(null);
   const [workItemFormService, setWorkItemFormService] = useState<IWorkItemFormService | null>(null);
+  const [questionVersionIndex, setQuestionVersionIndex] = useState<number>(0);
 
   useEffect(() => {
     initializeSDK();
@@ -27,42 +27,30 @@ const QuestionnaireForm: React.FC = () => {
       const wifService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
       setWorkItemFormService(wifService);
 
-      const workItemId = await wifService.getId();
-      setCurrentWorkItemId(workItemId.toString());
-
       const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
       const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
-      const loadedQuestions = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
-      console.log("Loaded Questions:", loadedQuestions);
-      const normalizedQuestions = normalizeQuestions(loadedQuestions);
-      setQuestions(normalizedQuestions);
-
+      const questionVersions: Question[][] = await dataManager.getValue('questionVersions', { scopeType: 'Default' }) || [];
       const fieldValue = await wifService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
-      let parsedAnswers: { [questionId: string]: AnswerDetail & { checked?: boolean } } = {};
+
+      let parsedAnswersData = { versionIndex: 0, data: {} };
       if (fieldValue) {
         const decodedFieldValue = decodeHtmlEntities(fieldValue);
         console.log("Loaded Answer:", decodedFieldValue);
         try {
-          parsedAnswers = JSON.parse(decodedFieldValue);
+          parsedAnswersData = JSON.parse(decodedFieldValue);
         } catch (parseError) {
           console.error("JSON parsing error:", parseError, "Field Value:", fieldValue);
         }
+      } else if (questionVersions.length > 0) {
+        // Use the latest version index if questions are available
+        const latestVersionIndex = questionVersions.length - 1;
+        parsedAnswersData.versionIndex = latestVersionIndex;
       }
-
-      const initialAnswers = normalizedQuestions.reduce((acc, question) => {
-        acc[question.id] = {
-          ...(parsedAnswers[question.id] || {
-            questionText: question.text,
-            entries: createDefaultEntries(question),
-            uniqueResult: 0,
-          }),
-          checked: parsedAnswers[question.id]?.checked || false
-        };
-        return acc;
-      }, {} as { [questionId: string]: AnswerDetail & { checked?: boolean } });
-
-      setAnswers(initialAnswers);
+      setQuestionVersionIndex(parsedAnswersData.versionIndex);
+      const loadedQuestions = questionVersions[parsedAnswersData.versionIndex] || [];
+      setQuestions(loadedQuestions);
+      setAnswers(parsedAnswersData.data);
     } catch (error) {
       console.error("SDK Initialization Error: ", error);
     }
@@ -99,7 +87,7 @@ const QuestionnaireForm: React.FC = () => {
       const updatedAnswers = calculateUniqueResultForQuestions(newAnswers);
 
       if (workItemFormService) {
-        const serialized = JSON.stringify(updatedAnswers);
+        const serialized = JSON.stringify({ versionIndex: questionVersionIndex, data: updatedAnswers });
         workItemFormService.setFieldValue('Custom.AnswersField', serialized);
       }
       return updatedAnswers;
@@ -114,7 +102,7 @@ const QuestionnaireForm: React.FC = () => {
       const updatedAnswers = calculateUniqueResultForQuestions(newAnswers);
 
       if (workItemFormService) {
-        const serialized = JSON.stringify(updatedAnswers);
+        const serialized = JSON.stringify({ versionIndex: questionVersionIndex, data: updatedAnswers });
         workItemFormService.setFieldValue('Custom.AnswersField', serialized);
       }
       return updatedAnswers;

@@ -1,12 +1,11 @@
-import './TestConfigurationPage.scss'; // Import the SCSS for styling
-
+import './TestConfigurationPage.scss';
 import * as React from 'react';
 import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { Button } from 'azure-devops-ui/Button';
 import { TextField, TextFieldWidth } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
-import { Question, normalizeQuestions, showRootComponent } from '../Common/Common';
+import { Question, showRootComponent } from '../Common/Common';
 
 const ConfigurationPage: React.FC = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -14,45 +13,36 @@ const ConfigurationPage: React.FC = () => {
     const [newExpectedEntriesCount, setNewExpectedEntriesCount] = useState<number>(1);
     const [newLabels, setNewLabels] = useState<string[]>([]);
     const [newTypes, setNewTypes] = useState<string[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const initializeSDK = async () => {
-            console.log('Initializing SDK...');
-            await SDK.init();
-            try {
-                await loadQuestions();
-            } catch (err) {
-                console.error('Failed to load questions:', err);
-                setError('Failed to load questions.');
-            } finally {
-                setIsLoading(false);
-                console.log('Initialization complete.');
-            }
-        };
-
-        initializeSDK();
+        initializePage();
     }, []);
 
-    const loadQuestions = async () => {
-        const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
-        const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
-
-        const loadedQuestionsRaw = await dataManager.getValue<Question[]>('questions', { scopeType: 'Default' }) || [];
-        console.log('Questions loaded (raw):', loadedQuestionsRaw);
-        const loadedQuestions = normalizeQuestions(loadedQuestionsRaw);
-        setQuestions(loadedQuestions);
-        console.log('Questions loaded:', loadedQuestions);
+    const initializePage = async () => {
+        await SDK.init();
+        await loadCurrentQuestions();
     };
 
-    const saveQuestions = async () => {
+    const loadCurrentQuestions = async () => {
+        const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+        const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+        const questionVersions = await dataManager.getValue<Question[][]>('questionVersions', { scopeType: 'Default' }) || [];
+        const latestVersion = questionVersions[questionVersions.length - 1] || [];
+        setQuestions(latestVersion);
+    };
+
+    const saveNewVersionOfQuestions = async () => {
         try {
             const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
             const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
-            await dataManager.setValue('questions', questions, { scopeType: 'Default' });
-            alert('Questions saved successfully!');
+            const questionVersions = await dataManager.getValue<Question[][]>('questionVersions', { scopeType: 'Default' }) || [];
+            questionVersions.push([...questions]); // Save a new version
+            await dataManager.setValue('questionVersions', questionVersions, { scopeType: 'Default' });
+
+            alert('Questions saved successfully as a new version!');
+            loadCurrentQuestions(); // Reload the latest questions after saving
         } catch (err) {
             console.error('Failed to save questions:', err);
             setError('Failed to save questions.');
@@ -81,39 +71,33 @@ const ConfigurationPage: React.FC = () => {
         }
     };
 
-    const handleExpectedEntriesCountChange = (questionId: string, count: number) => {
+    const handleTextChange = (questionId: string, newText: string) => {
         setQuestions(questions.map(q =>
-            q.id === questionId
-                ? { ...q, expectedEntries: { ...q.expectedEntries, count } }
-                : q
+            q.id === questionId ? { ...q, text: newText } : q
+        ));
+    }
+
+    const handleLabelChange = (questionId: string, index: number, newLabel: string) => {
+        setQuestions(questions.map(q =>
+            q.id === questionId ? {
+                ...q,
+                expectedEntries: {
+                    ...q.expectedEntries,
+                    labels: q.expectedEntries.labels.map((label, i) => i === index ? newLabel : label)
+                }
+            } : q
         ));
     };
 
-    const handleLabelChange = (questionId: string, index: number, label: string) => {
+    const handleTypeChange = (questionId: string, index: number, newType: string) => {
         setQuestions(questions.map(q =>
-            q.id === questionId
-                ? {
-                    ...q,
-                    expectedEntries: {
-                        ...q.expectedEntries,
-                        labels: q.expectedEntries.labels.map((l, i) => i === index ? label : l)
-                    }
+            q.id === questionId ? {
+                ...q,
+                expectedEntries: {
+                    ...q.expectedEntries,
+                    types: q.expectedEntries.types.map((type, i) => i === index ? newType : type)
                 }
-                : q
-        ));
-    };
-
-    const handleTypeChange = (questionId: string, index: number, type: string) => {
-        setQuestions(questions.map(q =>
-            q.id === questionId
-                ? {
-                    ...q,
-                    expectedEntries: {
-                        ...q.expectedEntries,
-                        types: q.expectedEntries.types.map((t, i) => i === index ? type : t)
-                    }
-                }
-                : q
+            } : q
         ));
     };
 
@@ -122,24 +106,20 @@ const ConfigurationPage: React.FC = () => {
             <h2>Questionnaire Configuration</h2>
             {questions.map(question => (
                 <div className="question-item" key={question.id}>
-                    <TextField value={question.text || ''} readOnly width={TextFieldWidth.auto} className="full-width-text-field" />
                     <TextField
-                        value={String(question.expectedEntries.count)}
-                        onChange={(e, value) => {
-                            const numericValue = Number(value);
-                            if (!isNaN(numericValue)) {
-                                handleExpectedEntriesCountChange(question.id, numericValue);
-                            }
-                        }}
-                        placeholder="Number of entries"
+                        value={question.text || ''}
+                        onChange={(e, value) => handleTextChange(question.id, value || '')}
                         width={TextFieldWidth.auto}
                         className="full-width-text-field"
+                        placeholder="Edit question text"
                     />
-                    {Array.from({ length: question.expectedEntries.count }).map((_, index) => (
-                        <div className="entry-item" key={index}>
+                    <div>Entries:</div>
+                    {question.expectedEntries.labels.map((label, index) => (
+                        <div key={index}>
                             <TextField
-                                value={question.expectedEntries.labels[index] || ''}
+                                value={label || ''}
                                 onChange={(e, value) => handleLabelChange(question.id, index, value || '')}
+                                className="entry-label"
                                 placeholder={`Label for entry ${index + 1}`}
                             />
                             <select
@@ -172,7 +152,7 @@ const ConfigurationPage: React.FC = () => {
                     placeholder="Number of entries"
                 />
                 {Array.from({ length: newExpectedEntriesCount }).map((_, index) => (
-                    <div className="entry-item" key={index}>
+                    <div key={index}>
                         <TextField
                             value={newLabels[index] || ''}
                             onChange={(e, value) => {
@@ -202,7 +182,7 @@ const ConfigurationPage: React.FC = () => {
                 ))}
             </div>
             <Button text="Add Question" onClick={addQuestion} />
-            <Button text="Save Questions" onClick={saveQuestions} />
+            <Button text="Save Questions" onClick={saveNewVersionOfQuestions} />
         </div>
     );
 };

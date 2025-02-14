@@ -32,6 +32,12 @@ export interface AnswerDetail {
   uniqueResult?: number; // Unique result per question
   totalWeight?: number;  // Add this line
 }
+
+export interface AnswerData {
+  versionIndex: number;
+  data: { [questionId: string]: AnswerDetail & { checked?: boolean } };
+}
+
 export const normalizeQuestions = (loadedQuestions: any[]): Question[] => {
   return loadedQuestions.map(question => ({
     id: question.id || "",
