@@ -59,3 +59,20 @@ export const decodeHtmlEntities = (str: string): string => {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">");
 };
+
+
+export interface RoleAssignment {
+  roleId: string;
+  raci: string;
+};
+
+// src/utils/roleUtils.ts
+import * as SDK from 'azure-devops-extension-sdk';
+import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
+
+export const fetchRoles = async () => {
+    const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+    const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+    const rolesData = await dataManager.getValue<{ id: string, name: string }[]>('roles', { scopeType: 'Default' }) || [];
+    return rolesData;
+};

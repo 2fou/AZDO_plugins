@@ -35,7 +35,6 @@ const DEFAULT_CONFIG: Config = {
 
 SDK.init();
 
-// Before saving, perform checks to see if the form is dirty
 const checkIfFormIsDirty = async (workItemService: IWorkItemFormService) => {
     const isDirty = await workItemService.isDirty();
     console.log('Is form dirty:', isDirty);
@@ -77,16 +76,38 @@ const createWorkItemWithChildren = async (
     parentType: string,
     parentId: number,
     childrenConfigs: StoryConfig[],
-    childType: string,
-    grandchildType: string | null = null
+    directChildType: string,
+    grandchildType?: string
 ) => {
-    for (const childConfig of childrenConfigs) {
-        const childItem = await createWorkItem(orgUrl, { type: childType, title: childConfig.title, parentId });
-        console.log(`${childType} created:`, childItem.id);
+    if (childrenConfigs.length === 0) {
+        console.log(`No children configurations found for ${parentType}. Skipping child creation.`);
+        return;
+    }
 
-        if (grandchildType) {
+    for (const childConfig of childrenConfigs) {
+        if (!grandchildType) {
+            for (const taskTitle of childConfig.tasks) {
+                const taskItem = await createWorkItem(orgUrl, {
+                    type: directChildType,
+                    title: taskTitle,
+                    parentId
+                });
+                console.log(`${directChildType} created:`, taskItem.id);
+            }
+        } else {
+            const childItem = await createWorkItem(orgUrl, {
+                type: directChildType,
+                title: childConfig.title,
+                parentId
+            });
+            console.log(`${directChildType} created:`, childItem.id);
+
             for (const grandchildTitle of childConfig.tasks) {
-                const grandchildItem = await createWorkItem(orgUrl, { type: grandchildType, title: grandchildTitle, parentId: childItem.id });
+                const grandchildItem = await createWorkItem(orgUrl, {
+                    type: grandchildType,
+                    title: grandchildTitle,
+                    parentId: childItem.id
+                });
                 console.log(`${grandchildType} created:`, grandchildItem.id);
             }
         }
@@ -102,7 +123,7 @@ SDK.register("createHierarchy", () => {
                 console.log('SDK ready!');
                 const locationService = await SDK.getService<any>(CommonServiceIds.LocationService);
                 const orgUrl = await locationService.getResourceAreaLocation(CoreRestClient.RESOURCE_AREA_ID);
-                console.log('Origine URL:', orgUrl);
+                console.log('Origin URL:', orgUrl);
                 const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
 
                 const dataManager = await extDataService.getExtensionDataManager(
@@ -120,57 +141,64 @@ SDK.register("createHierarchy", () => {
                 const currentItemId = await workItemService.getId();
                 console.log('Current item type %s id %d', currentWorkItemType, currentItemId);
 
-switch (currentWorkItemType) {
-    case config.workItemTypes.epic: {
-        console.log('Current item is an Epic.');
+                switch (currentWorkItemType) {
+                    case config.workItemTypes.epic: {
+                        console.log('Current item is an Epic.');
 
-        // Create a Feature under the Epic
-        const featureItem = await createWorkItem(orgUrl, {
-            type: config.workItemTypes.feature,
-            title: config.featureTitle,
-            parentId: currentItemId
-        });
+                        const featureItem = await createWorkItem(orgUrl, {
+                            type: config.workItemTypes.feature,
+                            title: config.featureTitle,
+                            parentId: currentItemId
+                        });
 
-        console.log(`Feature "${config.featureTitle}" created:`, featureItem.id);
+                        console.log(`Feature "${config.featureTitle}" created:`, featureItem.id);
 
-        // For each story, create a story under the feature and tasks under each story
-        for (const storyConfig of config.stories) {
-            const storyItem = await createWorkItem(orgUrl, {
-                type: config.workItemTypes.story,
-                title: storyConfig.title,
-                parentId: featureItem.id
-            });
-            console.log(`Story "${storyConfig.title}" created:`, storyItem.id);
+                        for (const storyConfig of config.stories) {
+                            const storyItem = await createWorkItem(orgUrl, {
+                                type: config.workItemTypes.story,
+                                title: storyConfig.title,
+                                parentId: featureItem.id
+                            });
+                            console.log(`Story "${storyConfig.title}" created:`, storyItem.id);
 
-            for (const taskTitle of storyConfig.tasks) {
-                const taskItem = await createWorkItem(orgUrl, {
-                    type: config.workItemTypes.task,
-                    title: taskTitle,
-                    parentId: storyItem.id
-                });
-                console.log(`Task "${taskTitle}" created:`, taskItem.id);
-            }
-        }
-        break;
-    }
+                            for (const taskTitle of storyConfig.tasks) {
+                                const taskItem = await createWorkItem(orgUrl, {
+                                    type: config.workItemTypes.task,
+                                    title: taskTitle,
+                                    parentId: storyItem.id
+                                });
+                                console.log(`Task "${taskTitle}" created:`, taskItem.id);
+                            }
+                        }
+                        break;
+                    }
 
-    case config.workItemTypes.feature: {
-        console.log('Current item is a Feature.');
-        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.story, config.workItemTypes.task);
-        break;
-    }
+                    case config.workItemTypes.feature: {
+                        console.log('Current item is a Feature.');
+                        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.story, config.workItemTypes.task);
+                        break;
+                    }
 
-    case config.workItemTypes.story: {
-        console.log('Current item is a Story.');
-        await createWorkItemWithChildren(orgUrl, currentWorkItemType, currentItemId, config.stories, config.workItemTypes.task);
-        break;
-    }
+                    case config.workItemTypes.story: {
+                        console.log('Current item is a Story.');
 
-    default:
-        alert('Creation is only allowed from Epics, Features, or User Stories.');
-        break;
-}
-                // Check if the form is dirty before saving
+                        // Directly create tasks under the current Story
+                        for (const taskTitle of config.stories.flatMap(story => story.tasks)) {
+                            const taskItem = await createWorkItem(orgUrl, {
+                                type: config.workItemTypes.task,
+                                title: taskTitle,
+                                parentId: currentItemId
+                            });
+                            console.log(`Task "${taskTitle}" created:`, taskItem.id);
+                        }
+                        break;
+                    }
+
+                    default:
+                        alert('Creation is only allowed from Epics, Features, or User Stories.');
+                        break;
+                }
+
                 const shouldSave = await checkIfFormIsDirty(workItemService);
                 if (shouldSave) {
                     await workItemService.save();

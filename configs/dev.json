@@ -2,7 +2,7 @@
   "baseUri": "https://localhost:3000",
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.216",
+  "version": "1.0.220",
   "contributions": [
     {
       "id": "configuration",
@@ -14,6 +14,42 @@
         "name": "Questionnaire Configuration",
         "order": 99,
         "uri": "dist/TestConfigurationPage/TestConfigurationPage.html"
+      }
+    },
+    {
+      "id": "role-configuration",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-web.project-admin-hub-group"
+      ],
+      "properties": {
+        "name": "Role Configuration",
+        "order": 98,
+        "uri": "dist/RoleConfigurationPage/RoleConfigurationPage.html"
+      }
+    },
+    {
+      "id": "raci-control",
+      "type": "ms.vss-work-web.work-item-form-control",
+      "targets": [
+        "ms.vss-work-web.work-item-form"
+      ],
+      "properties": {
+        "name": "RACI Control",
+        "uri": "dist/RaciExtensionComponent/RaciExtensionComponent.html",
+        "height": 800
+      }
+    },
+    {
+      "id": "raci-table",
+      "type": "ms.vss-work-web.work-item-form-control",
+      "targets": [
+        "ms.vss-work-web.work-item-form"
+      ],
+      "properties": {
+        "name": "RACI table",
+        "uri": "dist/RaciTableComponent/RaciTableComponent.html",
+        "height": 800
       }
     },
     {
