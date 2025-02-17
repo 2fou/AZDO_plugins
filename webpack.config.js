@@ -8,7 +8,7 @@ const entries = {};
 // Loop through subfolders in the "src" folder and add an entry for each one
 const srcDir = path.join(__dirname, "src");
 fs.readdirSync(srcDir).filter(dir => {
-    if (fs.statSync(path.join(srcDir, dir)).isDirectory() && dir !== 'img') {
+    if (fs.statSync(path.join(srcDir, dir)).isDirectory() && dir !== 'img' && dir !== 'ScreenShot') {
         entries[dir] = "./" + path.relative(process.cwd(), path.join(srcDir, dir, dir));
     }
 });
@@ -56,7 +56,8 @@ module.exports = (env, argv) => ({
         new CopyWebpackPlugin({
             patterns: [
                 { from: "**/*.html", context: "src" },
-                { from: "img/**/*", context: "src" }  // Add this line to copy the img directory
+                { from: "img/**/*", context: "src" } , 
+                { from: "ScreenShot/**/*", context: "src" }  
             ]
         })
     ],

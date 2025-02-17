@@ -69,37 +69,38 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
 ## Setup
 
 - Setup a new custom field "AnswersField" (Will hold the questionary answers) & "RoleAssignmentsField" (Will hold the role & responsabilities for the RACI table) in a process, this field can be hidden from the work item type.
-      <img src="/src/ScreenShoot/image-1.png" alt="Process" />
+      <img src="/src/ScreenShot/image-1.png" alt="Process" />
+      ![Export](/dist/ScreenShot/image-1.png)
  In the below sample I have also create 3 new page which will use the ad-hoc contribution.
-       <img src="/src/ScreenShoot/image-2.png" alt="New custom Field" />
+       <img src="/src/ScreenShot/image-2.png" alt="New custom Field" />
  For each page, select the corresponding contribution:
  - "Deliverable Control is the result of the Questionary for the Feature"
  - "Progress Indicator is a widget to show a pregress bar"
-        <img src="/src/ScreenShoot/image-3.png" alt="Contributions" />
+        <img src="/src/ScreenShot/image-3.png" alt="Contributions" />
  - "RACI Control" is used to assign roles and responsabilities to each deliveries
-        <img src="/src/ScreenShoot/image-4.png" alt="RACI" /> 
+        <img src="/src/ScreenShot/image-4.png" alt="RACI" /> 
  - "RACI TABLE" shows the RACI Table visually
 - Add questions to the project through project/setting/extension
-        <img src="/src/ScreenShoot/image-5.png" alt="Questionary" /> 
+        <img src="/src/ScreenShot/image-5.png" alt="Questionary" /> 
 - Set the contribution "work item setup"
-        <img src="/src/ScreenShoot/image-6.png" alt="Workitem Setup" /> 
+        <img src="/src/ScreenShot/image-6.png" alt="Workitem Setup" /> 
 - Role & responsability
-        <img src="/src/ScreenShoot/image-7.png" alt="Role Setup" /> 
+        <img src="/src/ScreenShot/image-7.png" alt="Role Setup" /> 
 - Navigate to a work item Epic in your Azure DevOps project.
-        <img src="/src/ScreenShoot/image-8.png" alt="Navigate to an Epic" /> 
+        <img src="/src/ScreenShot/image-8.png" alt="Navigate to an Epic" /> 
 - use the "create hierarchy" button
-        <img src="/src/ScreenShoot/image-9.png" alt="Create hierarchy" /> 
+        <img src="/src/ScreenShot/image-9.png" alt="Create hierarchy" /> 
 - Click on the new child "Feature" work Item
 - Use the integrated tab to fill out the questionnaire.
-        <img src="/src/ScreenShoot/image-10.png" alt="Fill out questionary" /> 
+        <img src="/src/ScreenShot/image-10.png" alt="Fill out questionary" /> 
 - Save your responses, and they will persist in the associated work item custom field.
-        <img src="/src/ScreenShoot/image-11.png" alt="See answsers" /> 
+        <img src="/src/ScreenShot/image-11.png" alt="See answsers" /> 
 - Here I kept it visible to see the Json response
-        <img src="/src/ScreenShoot/image-12.png" alt="See answsers" /> 
+        <img src="/src/ScreenShot/image-12.png" alt="See answsers" /> 
 - Once you have previously set the roles, you can start to set the RACI
-        <img src="/src/ScreenShoot/image-13.png" alt="Set the Roles" /> 
+        <img src="/src/ScreenShot/image-13.png" alt="Set the Roles" /> 
 - The RACI TABLE will show the settings throught a RACI table
-        <img src="/src/ScreenShoot/image-14.png" alt="See the Raci table" /> 
+        <img src="/src/ScreenShot/image-14.png" alt="See the Raci table" /> 
 
 ## Development
 
@@ -143,5 +144,5 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - [React](https://reactjs.org/)
 - [Azure DevOps UI](https://github.com/microsoft/azure-devops-ui)
 
-## Some screenshoot
+## Some ScreenShot
 
