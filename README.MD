@@ -66,9 +66,10 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
 
    Once published, add the extension to your organization in Azure DevOps through the Marketplace.
 
-## Usage
+## Setup
 
 - Setup a new custom field "AnswersField" in a process, this field can be hidden from the work item type.
+      ![alt text](image-1.png)
 - Add the Livrable Control to the workitem type
 - Add questions to the project through project/setting/extension
 - Navigate to a work item in your Azure DevOps project.
