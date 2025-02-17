@@ -73,34 +73,47 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
       ![Export](/dist/ScreenShot/image-1.png)
  In the below sample I have also create 3 new page which will use the ad-hoc contribution.
        <img src="/src/ScreenShot/image-2.png" alt="New custom Field" />
+       ![Export](/dist/ScreenShot/image-2.png)
  For each page, select the corresponding contribution:
  - "Deliverable Control is the result of the Questionary for the Feature"
  - "Progress Indicator is a widget to show a pregress bar"
         <img src="/src/ScreenShot/image-3.png" alt="Contributions" />
+        ![Export](/dist/ScreenShot/image-3.png)
  - "RACI Control" is used to assign roles and responsabilities to each deliveries
         <img src="/src/ScreenShot/image-4.png" alt="RACI" /> 
+        ![Export](/dist/ScreenShot/image-4.png)
  - "RACI TABLE" shows the RACI Table visually
 - Add questions to the project through project/setting/extension
         <img src="/src/ScreenShot/image-5.png" alt="Questionary" /> 
+        ![Export](/dist/ScreenShot/image-5.png)
 - Set the contribution "work item setup"
         <img src="/src/ScreenShot/image-6.png" alt="Workitem Setup" /> 
+        ![Export](/dist/ScreenShot/image-6.png)
 - Role & responsability
         <img src="/src/ScreenShot/image-7.png" alt="Role Setup" /> 
+        ![Export](/dist/ScreenShot/image-7.png)
 - Navigate to a work item Epic in your Azure DevOps project.
         <img src="/src/ScreenShot/image-8.png" alt="Navigate to an Epic" /> 
+        ![Export](/dist/ScreenShot/image-8.png)
 - use the "create hierarchy" button
         <img src="/src/ScreenShot/image-9.png" alt="Create hierarchy" /> 
+        ![Export](/dist/ScreenShot/image-9.png)
 - Click on the new child "Feature" work Item
 - Use the integrated tab to fill out the questionnaire.
         <img src="/src/ScreenShot/image-10.png" alt="Fill out questionary" /> 
+        ![Export](/dist/ScreenShot/image-10.png)
 - Save your responses, and they will persist in the associated work item custom field.
         <img src="/src/ScreenShot/image-11.png" alt="See answsers" /> 
+        ![Export](/dist/ScreenShot/image-11.png)
 - Here I kept it visible to see the Json response
         <img src="/src/ScreenShot/image-12.png" alt="See answsers" /> 
+        ![Export](/dist/ScreenShot/image-12.png)
 - Once you have previously set the roles, you can start to set the RACI
         <img src="/src/ScreenShot/image-13.png" alt="Set the Roles" /> 
+        ![Export](/dist/ScreenShot/image-13.png)
 - The RACI TABLE will show the settings throught a RACI table
         <img src="/src/ScreenShot/image-14.png" alt="See the Raci table" /> 
+        ![Export](/dist/ScreenShot/image-14.png)
 
 ## Development
 
