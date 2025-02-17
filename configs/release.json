@@ -1,7 +1,7 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.222",
+  "version": "1.0.225",
   "contributions": [
     {
       "id": "configuration",
@@ -50,7 +50,7 @@
         "uri": "dist/RaciTableComponent/RaciTableComponent.html",
         "height": 800
       }
-    },    
+    },
     {
       "id": "progress-indicator-control",
       "type": "ms.vss-work-web.work-item-form-control",
@@ -70,7 +70,7 @@
         "ms.vss-work-web.work-item-form"
       ],
       "properties": {
-        "name": "Livrable Control",
+        "name": "Deliverable Control",
         "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
         "height": 500
       }
@@ -95,7 +95,7 @@
         "ms.vss-work-web.work-item-toolbar-menu"
       ],
       "properties": {
-        "registeredObjectId":"createHierarchy",
+        "registeredObjectId": "createHierarchy",
         "text": "Create Hierarchy",
         "group": "actions",
         "uri": "dist/CreateWorkItemsComponent/CreateWorkItemsComponent.html",
