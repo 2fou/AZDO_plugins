@@ -69,37 +69,37 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
 ## Setup
 
 - Setup a new custom field "AnswersField" (Will hold the questionary answers) & "RoleAssignmentsField" (Will hold the role & responsabilities for the RACI table) in a process, this field can be hidden from the work item type.
-      <img src="ScreenShoot/image-1.png" alt="Process" />
+      <img src="ScreenShoot/src/image-1.png" alt="Process" />
  In the below sample I have also create 3 new page which will use the ad-hoc contribution.
-       <img src="ScreenShoot/image-2.png" alt="New custom Field" />
+       <img src="ScreenShoot/src/image-2.png" alt="New custom Field" />
  For each page, select the corresponding contribution:
  - "Deliverable Control is the result of the Questionary for the Feature"
  - "Progress Indicator is a widget to show a pregress bar"
-        <img src="ScreenShoot/image-3.png" alt="Contributions" />
+        <img src="ScreenShoot/src/image-3.png" alt="Contributions" />
  - "RACI Control" is used to assign roles and responsabilities to each deliveries
-        <img src="ScreenShoot/image-4.png" alt="RACI" /> 
+        <img src="ScreenShoot/src/image-4.png" alt="RACI" /> 
  - "RACI TABLE" shows the RACI Table visually
 - Add questions to the project through project/setting/extension
-        <img src="ScreenShoot/image-5.png" alt="Questionary" /> 
+        <img src="ScreenShoot/src/image-5.png" alt="Questionary" /> 
 - Set the contribution "work item setup"
-        <img src="ScreenShoot/image-6.png" alt="Workitem Setup" /> 
+        <img src="ScreenShoot/src/image-6.png" alt="Workitem Setup" /> 
 - Role & responsability
-        <img src="ScreenShoot/image-7.png" alt="Role Setup" /> 
+        <img src="ScreenShoot/src/image-7.png" alt="Role Setup" /> 
 - Navigate to a work item Epic in your Azure DevOps project.
-        <img src="ScreenShoot/image-8.png" alt="Navigate to an Epic" /> 
+        <img src="ScreenShoot/src/image-8.png" alt="Navigate to an Epic" /> 
 - use the "create hierarchy" button
-        <img src="ScreenShoot/image-9.png" alt="Create hierarchy" /> 
+        <img src="ScreenShoot/src/image-9.png" alt="Create hierarchy" /> 
 - Click on the new child "Feature" work Item
 - Use the integrated tab to fill out the questionnaire.
-        <img src="ScreenShoot/image-10.png" alt="Fill out questionary" /> 
+        <img src="ScreenShoot/src/image-10.png" alt="Fill out questionary" /> 
 - Save your responses, and they will persist in the associated work item custom field.
-        <img src="ScreenShoot/image-11.png" alt="See answsers" /> 
+        <img src="ScreenShoot/src/image-11.png" alt="See answsers" /> 
 - Here I kept it visible to see the Json response
-        <img src="ScreenShoot/image-12.png" alt="See answsers" /> 
+        <img src="ScreenShoot/src/image-12.png" alt="See answsers" /> 
 - Once you have previously set the roles, you can start to set the RACI
-        <img src="ScreenShoot/image-13.png" alt="Set the Roles" /> 
+        <img src="ScreenShoot/src/image-13.png" alt="Set the Roles" /> 
 - The RACI TABLE will show the settings throught a RACI table
-        <img src="ScreenShoot/image-14.png" alt="See the Raci table" /> 
+        <img src="ScreenShoot/src/image-14.png" alt="See the Raci table" /> 
 
 ## Development
 
