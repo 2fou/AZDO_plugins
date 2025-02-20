@@ -2,7 +2,7 @@
   "baseUri": "https://localhost:3000",
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.220",
+  "version": "1.0.234",
   "contributions": [
     {
       "id": "configuration",
@@ -26,6 +26,42 @@
         "name": "Role Configuration",
         "order": 98,
         "uri": "dist/RoleConfigurationPage/RoleConfigurationPage.html"
+      }
+    },
+    {
+      "id": "deliverables-configuration",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-web.project-admin-hub-group"
+      ],
+      "properties": {
+        "name": "Deliverable Configuration",
+        "order": 97,
+        "uri": "dist/DeliveryConfigurationPage/DeliveryConfigurationPage.html"
+      }
+    },
+    {
+      "id": "questionay-configuration",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-web.project-admin-hub-group"
+      ],
+      "properties": {
+        "name": "Questionary Configuration",
+        "order": 97,
+        "uri": "dist/QuestionaryConfigurationPage/QuestionaryConfigurationPage.html"
+      }
+    },
+    {
+      "id": "deliverables-control",
+      "type": "ms.vss-work-web.work-item-form-control",
+      "targets": [
+        "ms.vss-work-web.work-item-form"
+      ],
+      "properties": {
+        "name": "Deliverables Control",
+        "uri": "dist/DeliverablesComponent/DeliverablesComponent.html",
+        "height": 500
       }
     },
     {

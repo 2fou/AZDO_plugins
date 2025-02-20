@@ -38,6 +38,14 @@ export interface AnswerData {
   data: { [questionId: string]: AnswerDetail & { checked?: boolean } };
 }
 
+export interface Deliverable {
+    id: string;
+    label: string;
+    type: string;
+    value: string | boolean;
+}
+
+
 export const normalizeQuestions = (loadedQuestions: any[]): Question[] => {
   return loadedQuestions.map(question => ({
     id: question.id || "",
