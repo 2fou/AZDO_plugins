@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
-import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
+import { CommonServiceIds, IExtensionDataService } from 'azure-devops-extension-api';
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from "azure-devops-extension-api/WorkItemTracking";
 import { Deliverable, showRootComponent, decodeHtmlEntities } from '../Common/Common';
 import { WorkItemPicker } from "../Common/WorkItemPicker";
+import ConfirmDialog from '../Common/ConfirmDialog';
 
 interface Question {
     id: string;
@@ -28,7 +29,11 @@ const DeliverablesComponent: React.FC = () => {
     const [deliverables, setDeliverables] = useState<Deliverable[]>([]);
     const [deliverableDetails, setDeliverableDetails] = useState<{ [deliverableId: string]: DeliverableDetail }>({});
     const [workItemFormService, setWorkItemFormService] = useState<IWorkItemFormService | null>(null);
-    const [currentVersionDescription, setCurrentVersionDescription] = useState<string>('');
+
+    const [versions, setVersions] = useState<Version[]>([]);
+    const [currentVersion, setCurrentVersion] = useState<Version | null>(null);
+    const [isConfirmDialogVisible, setConfirmDialogVisible] = useState<boolean>(false);
+    const [pendingVersion, setPendingVersion] = useState<Version | null>(null);
 
     useEffect(() => {
         initializeSDK();
@@ -36,7 +41,6 @@ const DeliverablesComponent: React.FC = () => {
 
     const initializeSDK = async () => {
         await SDK.init();
-
         try {
             const wifService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
             setWorkItemFormService(wifService);
@@ -48,12 +52,23 @@ const DeliverablesComponent: React.FC = () => {
             setDeliverables(storedDeliverables);
 
             const questionVersions: Version[] = await dataManager.getValue('questionaryVersions', { scopeType: 'Default' }) || [];
-            if (questionVersions.length > 0) {
+            setVersions(questionVersions);
+
+            // Retrieve selected version
+            const selectedVersionDesc = await dataManager.getValue<string>('selectedVersion', { scopeType: 'Default' });
+            const selectedVersion = questionVersions.find(v => v.description === selectedVersionDesc);
+
+            if (selectedVersion) {
+                setCurrentVersion(selectedVersion);
+                setQuestions(selectedVersion.questions);
+            } else if (questionVersions.length > 0) {
+                // Fallback to latest version if no version saved
                 const latestVersion = questionVersions[questionVersions.length - 1];
+                setCurrentVersion(latestVersion);
                 setQuestions(latestVersion.questions);
-                setCurrentVersionDescription(latestVersion.description);
             }
 
+            // Retrieve existing selections and details
             const fieldValue = await wifService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
             if (fieldValue) {
                 const decodedFieldValue = decodeHtmlEntities(fieldValue);
@@ -136,20 +151,50 @@ const DeliverablesComponent: React.FC = () => {
 
     // Calculate weights for deliverables
     const weights = uniqueDeliverables.map((_, index) => Math.pow(2, index));
-
-    // Calculate totalWeight
     const totalWeight = weights.reduce((acc, weight) => acc + weight, 0);
-
-    // Calculate uniqueResult (sum of weights for answered deliverables)
     const uniqueResult = uniqueDeliverables.reduce((acc, deliverable, index) => {
         const detail = deliverableDetails[deliverable.id];
-        return detail && detail.value ? acc + weights[index] : acc;
+        return detail?.value ? acc + weights[index] : acc;
     }, 0);
+
+    const handleVersionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedVersionDescription = event.target.value;
+        const selectedVersion = versions.find((version) => version.description === selectedVersionDescription);
+        if (selectedVersion) {
+            setPendingVersion(selectedVersion);
+            setConfirmDialogVisible(true);
+        }
+    };
+
+    const confirmVersionChange = async () => {
+        if (pendingVersion) {
+            setCurrentVersion(pendingVersion);
+            setQuestions(pendingVersion.questions);
+            setSelectedQuestions(new Set());
+
+            // Save the confirmed version
+            const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+            const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+            await dataManager.setValue('selectedVersion', pendingVersion.description, { scopeType: 'Default' });
+
+            setPendingVersion(null);
+        }
+        setConfirmDialogVisible(false);
+    };
 
     return (
         <div>
+            <h3>Select Version</h3>
+            <select onChange={handleVersionChange} defaultValue={currentVersion?.description}>
+                {versions.map(version => (
+                    <option key={version.description} value={version.description}>
+                        {version.description}
+                    </option>
+                ))}
+            </select>
+
             <h3>Version Description</h3>
-            <p>{currentVersionDescription}</p>
+            <p>{currentVersion?.description}</p>
 
             {questions.map((question) => (
                 <div key={question.id}>
@@ -160,7 +205,7 @@ const DeliverablesComponent: React.FC = () => {
                     />
                 </div>
             ))}
-            
+
             <h3>Unique Deliverables</h3>
             <div>
                 {uniqueDeliverables.map((deliverable) => (
@@ -175,6 +220,14 @@ const DeliverablesComponent: React.FC = () => {
                 <p>Total Weight: {totalWeight}</p>
                 <p>Unique Result: {uniqueResult}</p>
             </div>
+
+            {isConfirmDialogVisible && (
+                <ConfirmDialog
+                    title="Confirm Version Change"
+                    message="Are you sure you want to switch to this version? Unsaved changes will be lost."
+                    onCancel={() => setConfirmDialogVisible(false)}
+                    onConfirm={confirmVersionChange} visible={isConfirmDialogVisible} />
+            )}
         </div>
     );
 };
