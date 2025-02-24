@@ -14,7 +14,7 @@ const DeliverableConfigurationPage: React.FC = () => {
         id: '',
         label: '',
         type: 'url',
-        value: ''
+        value: '',
     });
 
     useEffect(() => {
@@ -26,13 +26,6 @@ const DeliverableConfigurationPage: React.FC = () => {
         await loadDeliverables();
     };
 
-    const loadDeliverables = async () => {
-        const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
-        const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
-        const storedDeliverables = await dataManager.getValue<Deliverable[]>('deliverables', { scopeType: 'Default' }) || [];
-        setDeliverables(storedDeliverables);
-    };
-
     const saveDeliverables = async (updatedDeliverables: Deliverable[]) => {
         const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
         const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
@@ -41,13 +34,22 @@ const DeliverableConfigurationPage: React.FC = () => {
 
     const addDeliverable = () => {
         if (newDeliverable.label) {
-            const updatedDeliverables = [...deliverables, { ...newDeliverable, id: Date.now().toString() }];
+            const updatedDeliverables = [...deliverables, { ...newDeliverable, id: Date.now().toString(), linkedQuestions: [] }];
             setDeliverables(updatedDeliverables);
             setNewDeliverable({ id: '', label: '', type: 'url', value: '' });
             saveDeliverables(updatedDeliverables);
         } else {
             alert("Deliverable label is required!");
         }
+    };
+
+    const loadDeliverables = async () => {
+        const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+        const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+        const storedDeliverables = (await dataManager.getValue<Deliverable[]>('deliverables', { scopeType: 'Default' }) || []).map(d => ({
+            ...d,
+        }));
+        setDeliverables(storedDeliverables);
     };
 
     const updateDeliverable = (deliverableId: string, updated: Partial<Deliverable>) => {

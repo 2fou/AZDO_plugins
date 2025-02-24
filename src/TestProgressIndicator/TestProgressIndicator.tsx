@@ -2,8 +2,40 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from 'azure-devops-extension-api/WorkItemTracking';
-import { decodeHtmlEntities, AnswerData, AnswerDetail, showRootComponent } from '../Common/Common';
+import { decodeHtmlEntities,  showRootComponent } from '../Common/Common';
 
+
+
+interface Question {
+    id: string;
+    text: string;
+    expectedEntries: {
+      count: number;
+      labels: string[];
+      types: string[];
+      weights: number[]; // Ensure this is defined at the entry level
+    };
+  }
+  
+  interface EntryDetail {
+    label: string;
+    type: string;
+    value: string | boolean;
+    weight: number;
+  }
+  
+  interface AnswerDetail {
+    questionText: string;
+    entries: EntryDetail[];
+    uniqueResult?: number; // Unique result per question
+    totalWeight?: number;  // Add this line
+  };
+  
+   interface AnswerData {
+    versionIndex: number;
+    data: { [questionId: string]: AnswerDetail & { checked?: boolean } };
+  };
+  
 const ProgressIndicator: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);

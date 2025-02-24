@@ -4,16 +4,8 @@ import { Button } from 'azure-devops-ui/Button';
 import { TextField, TextFieldWidth } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
 import * as SDK from 'azure-devops-extension-sdk';
-import { showRootComponent } from '../Common/Common';
+import { Role, showRootComponent } from '../Common/Common';
 
-interface Role {
-    id: string;
-    name: string;
-    description: string;
-    personName: string;
-    department: string;
-    email: string;
-}
 
 const RoleConfigurationPage: React.FC = () => {
     const [roles, setRoles] = useState<Role[]>([]);

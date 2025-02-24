@@ -6,7 +6,7 @@ import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from "azure-devops-extension-api";
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from "azure-devops-extension-api/WorkItemTracking";
-import { showRootComponent, Question, EntryDetail, AnswerDetail, decodeHtmlEntities } from '../Common/Common';
+import { showRootComponent, Question, decodeHtmlEntities } from '../Common/Common';
 import { WorkItemPicker } from "../Common/WorkItemPicker";
 
 const QuestionnaireForm: React.FC = () => {
@@ -14,6 +14,37 @@ const QuestionnaireForm: React.FC = () => {
   const [answers, setAnswers] = useState<{ [questionId: string]: AnswerDetail & { checked?: boolean } }>({});
   const [workItemFormService, setWorkItemFormService] = useState<IWorkItemFormService | null>(null);
   const [questionVersionIndex, setQuestionVersionIndex] = useState<number>(0);
+
+interface Question {
+  id: string;
+  text: string;
+  expectedEntries: {
+    count: number;
+    labels: string[];
+    types: string[];
+    weights: number[]; // Ensure this is defined at the entry level
+  };
+}
+
+interface EntryDetail {
+  label: string;
+  type: string;
+  value: string | boolean;
+  weight: number;
+}
+
+interface AnswerDetail {
+  questionText: string;
+  entries: EntryDetail[];
+  uniqueResult?: number; // Unique result per question
+  totalWeight?: number;  // Add this line
+};
+
+ interface AnswerData {
+  versionIndex: number;
+  data: { [questionId: string]: AnswerDetail & { checked?: boolean } };
+};
+
 
   useEffect(() => {
     initializeSDK();

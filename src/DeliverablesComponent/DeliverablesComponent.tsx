@@ -4,15 +4,9 @@ import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { TextField } from 'azure-devops-ui/TextField';
 import { CommonServiceIds, IExtensionDataService } from 'azure-devops-extension-api';
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from "azure-devops-extension-api/WorkItemTracking";
-import { Deliverable, showRootComponent, decodeHtmlEntities } from '../Common/Common';
+import { Deliverable, showRootComponent, decodeHtmlEntities, Question } from '../Common/Common';
 import { WorkItemPicker } from "../Common/WorkItemPicker";
 import ConfirmDialog from '../Common/ConfirmDialog';
-
-interface Question {
-    id: string;
-    text: string;
-    linkedDeliverables: string[];
-}
 
 interface DeliverableDetail {
     value: any;
@@ -35,6 +29,11 @@ const DeliverablesComponent: React.FC = () => {
     const [isConfirmDialogVisible, setConfirmDialogVisible] = useState<boolean>(false);
     const [pendingVersion, setPendingVersion] = useState<Version | null>(null);
 
+    // State for weights and results
+    const [weights, setWeights] = useState<number[]>([]);
+    const [totalWeight, setTotalWeight] = useState<number>(0);
+    const [uniqueResult, setUniqueResult] = useState<number>(0);
+
     useEffect(() => {
         initializeSDK();
     }, []);
@@ -44,17 +43,20 @@ const DeliverablesComponent: React.FC = () => {
         try {
             const wifService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
             setWorkItemFormService(wifService);
-
+            
             const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
             const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
-            const storedDeliverables = await dataManager.getValue<Deliverable[]>('deliverables', { scopeType: 'Default' }) || [];
+           const storedDeliverables = (await dataManager.getValue<Deliverable[]>('deliverables', { scopeType: 'Default' }) || []).map(deliverable => ({
+    ...deliverable
+    
+}));
+setDeliverables(storedDeliverables);
             setDeliverables(storedDeliverables);
 
             const questionVersions: Version[] = await dataManager.getValue('questionaryVersions', { scopeType: 'Default' }) || [];
             setVersions(questionVersions);
 
-            // Retrieve selected version
             const selectedVersionDesc = await dataManager.getValue<string>('selectedVersion', { scopeType: 'Default' });
             const selectedVersion = questionVersions.find(v => v.description === selectedVersionDesc);
 
@@ -62,22 +64,26 @@ const DeliverablesComponent: React.FC = () => {
                 setCurrentVersion(selectedVersion);
                 setQuestions(selectedVersion.questions);
             } else if (questionVersions.length > 0) {
-                // Fallback to latest version if no version saved
                 const latestVersion = questionVersions[questionVersions.length - 1];
                 setCurrentVersion(latestVersion);
                 setQuestions(latestVersion.questions);
             }
 
-            // Retrieve existing selections and details
             const fieldValue = await wifService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true }) as string;
             if (fieldValue) {
                 const decodedFieldValue = decodeHtmlEntities(fieldValue);
                 const parsedData = JSON.parse(decodedFieldValue);
+                
                 if (parsedData.deliverables) {
                     setDeliverableDetails(parsedData.deliverables);
                 }
                 if (parsedData.selectedQuestions) {
                     setSelectedQuestions(new Set(parsedData.selectedQuestions));
+                }
+                if (parsedData.weights) {
+                    setWeights(parsedData.weights);
+                    setTotalWeight(parsedData.totalWeight);
+                    setUniqueResult(parsedData.uniqueResult);
                 }
             }
         } catch (error) {
@@ -93,14 +99,28 @@ const DeliverablesComponent: React.FC = () => {
             updatedSelections.delete(questionId);
         }
         setSelectedQuestions(updatedSelections);
+
+        updateAnswersField(updatedSelections);
     };
 
+    const updateAnswersField = (updatedSelections: Set<string>) => {
+    const currentVersionDescription = currentVersion ?. description || '';
+
+    if (workItemFormService) {
+        workItemFormService.setFieldValue('Custom.AnswersField', JSON.stringify({
+            version: currentVersionDescription,
+            deliverables: deliverableDetails,
+            selectedQuestions: Array.from(updatedSelections),
+            weights,
+            totalWeight,
+            uniqueResult
+        }));
+    }
+};
     const handleDeliverableChange = (deliverableId: string, newValue: any) => {
         setDeliverableDetails((prev) => {
             const newDetails = { ...prev, [deliverableId]: { value: newValue } };
-            if (workItemFormService) {
-                workItemFormService.setFieldValue('Custom.AnswersField', JSON.stringify({ deliverables: newDetails, selectedQuestions: Array.from(selectedQuestions) }));
-            }
+            updateAnswersField(selectedQuestions);
             return newDetails;
         });
     };
@@ -147,16 +167,6 @@ const DeliverablesComponent: React.FC = () => {
             .filter((deliverable): deliverable is Deliverable => Boolean(deliverable));
     };
 
-    const uniqueDeliverables = getUniqueDeliverablesForSelectedQuestions();
-
-    // Calculate weights for deliverables
-    const weights = uniqueDeliverables.map((_, index) => Math.pow(2, index));
-    const totalWeight = weights.reduce((acc, weight) => acc + weight, 0);
-    const uniqueResult = uniqueDeliverables.reduce((acc, deliverable, index) => {
-        const detail = deliverableDetails[deliverable.id];
-        return detail?.value ? acc + weights[index] : acc;
-    }, 0);
-
     const handleVersionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedVersionDescription = event.target.value;
         const selectedVersion = versions.find((version) => version.description === selectedVersionDescription);
@@ -172,7 +182,6 @@ const DeliverablesComponent: React.FC = () => {
             setQuestions(pendingVersion.questions);
             setSelectedQuestions(new Set());
 
-            // Save the confirmed version
             const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
             const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
             await dataManager.setValue('selectedVersion', pendingVersion.description, { scopeType: 'Default' });
@@ -208,7 +217,7 @@ const DeliverablesComponent: React.FC = () => {
 
             <h3>Unique Deliverables</h3>
             <div>
-                {uniqueDeliverables.map((deliverable) => (
+                {getUniqueDeliverablesForSelectedQuestions().map((deliverable) => (
                     <div key={deliverable.id} style={{ marginBottom: '10px' }}>
                         <div>{deliverable.label} ({deliverable.type})</div>
                         {renderDeliverableField(deliverable, deliverableDetails[deliverable.id] || { value: '' })}

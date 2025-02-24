@@ -3,25 +3,10 @@ import { Button } from 'azure-devops-ui/Button';
 import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
 import * as SDK from 'azure-devops-extension-sdk';
-import { showRootComponent } from '../Common/Common';
+import { Deliverable, Question, showRootComponent, Version } from '../Common/Common';
 
-interface Deliverable {
-    id: string;
-    label: string;
-    type: string;
-    value: string | boolean;
-}
 
-interface Question {
-    id: string;
-    text: string;
-    linkedDeliverables: string[];
-}
 
-interface Version {
-    description?: string;
-    questions: Question[];
-}
 
 const QuestionaryConfigurationPage: React.FC = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -102,7 +87,12 @@ const QuestionaryConfigurationPage: React.FC = () => {
 
     const addQuestion = () => {
         if (newQuestionText.trim() !== '') {
-            const newQuestion = { id: Date.now().toString(), text: newQuestionText, linkedDeliverables: [] };
+            const newQuestion: Question = { 
+                id: Date.now().toString(), 
+                text: newQuestionText, 
+                linkedDeliverables: [], 
+             
+            };
             const updatedQuestions = [...questions, newQuestion];
             setQuestions(updatedQuestions);
             setNewQuestionText('');

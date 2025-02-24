@@ -15,6 +15,17 @@ const ConfigurationPage: React.FC = () => {
     const [newTypes, setNewTypes] = useState<string[]>([]);
     const [error, setError] = useState<string | null>(null);
 
+    interface Question {
+        id: string;
+        text: string;
+        expectedEntries: {
+          count: number;
+          labels: string[];
+          types: string[];
+          weights: number[]; // Ensure this is defined at the entry level
+        };
+      }
+      
     useEffect(() => {
         initializePage();
     }, []);
