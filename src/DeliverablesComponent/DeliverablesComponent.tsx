@@ -29,7 +29,6 @@ const DeliverablesComponent: React.FC = () => {
     const [isConfirmDialogVisible, setConfirmDialogVisible] = useState<boolean>(false);
     const [pendingVersion, setPendingVersion] = useState<Version | null>(null);
 
-    // State for weights and results
     const [weights, setWeights] = useState<number[]>([]);
     const [totalWeight, setTotalWeight] = useState<number>(0);
     const [uniqueResult, setUniqueResult] = useState<number>(0);
@@ -38,20 +37,22 @@ const DeliverablesComponent: React.FC = () => {
         initializeSDK();
     }, []);
 
+    useEffect(() => {
+        // Update total weight and unique result when dependencies change
+        const calculatedTotalWeight = updateTotalWeight();
+        updateUniqueResult(calculatedTotalWeight);
+    }, [selectedQuestions, deliverableDetails]);
+
     const initializeSDK = async () => {
         await SDK.init();
         try {
             const wifService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
             setWorkItemFormService(wifService);
-            
+
             const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
             const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
 
-           const storedDeliverables = (await dataManager.getValue<Deliverable[]>('deliverables', { scopeType: 'Default' }) || []).map(deliverable => ({
-    ...deliverable
-    
-}));
-setDeliverables(storedDeliverables);
+            const storedDeliverables = await dataManager.getValue<Deliverable[]>('deliverables', { scopeType: 'Default' }) || [];
             setDeliverables(storedDeliverables);
 
             const questionVersions: Version[] = await dataManager.getValue('questionaryVersions', { scopeType: 'Default' }) || [];
@@ -73,7 +74,7 @@ setDeliverables(storedDeliverables);
             if (fieldValue) {
                 const decodedFieldValue = decodeHtmlEntities(fieldValue);
                 const parsedData = JSON.parse(decodedFieldValue);
-                
+
                 if (parsedData.deliverables) {
                     setDeliverableDetails(parsedData.deliverables);
                 }
@@ -99,28 +100,47 @@ setDeliverables(storedDeliverables);
             updatedSelections.delete(questionId);
         }
         setSelectedQuestions(updatedSelections);
-
-        updateAnswersField(updatedSelections);
     };
 
-    const updateAnswersField = (updatedSelections: Set<string>) => {
-    const currentVersionDescription = currentVersion ?. description || '';
+    const updateTotalWeight = () => {
+        let total = 0;
+        getUniqueDeliverablesForSelectedQuestions().forEach((deliverable, index) => {
+            total += Math.pow(2, index);
+        });
+        setTotalWeight(total);
+        return total;
+    };
 
-    if (workItemFormService) {
-        workItemFormService.setFieldValue('Custom.AnswersField', JSON.stringify({
-            version: currentVersionDescription,
-            deliverables: deliverableDetails,
-            selectedQuestions: Array.from(updatedSelections),
-            weights,
-            totalWeight,
-            uniqueResult
-        }));
-    }
-};
+    const updateUniqueResult = (calculatedTotalWeight: number) => {
+        let result = 0;
+        getUniqueDeliverablesForSelectedQuestions().forEach((deliverable, index) => {
+            if (deliverableDetails[deliverable.id] && deliverableDetails[deliverable.id].value) {
+                result += Math.pow(2, index);
+            }
+        });
+        setUniqueResult(result);
+
+        updateAnswersField(selectedQuestions, deliverableDetails, calculatedTotalWeight, result);
+    };
+
+    const updateAnswersField = (updatedSelections: Set<string>, updatedDeliverableDetails: { [deliverableId: string]: DeliverableDetail }, calculatedTotalWeight: number, updatedUniqueResult: number) => {
+        const currentVersionDescription = currentVersion?.description || '';
+
+        if (workItemFormService) {
+            workItemFormService.setFieldValue('Custom.AnswersField', JSON.stringify({
+                version: currentVersionDescription,
+                deliverables: updatedDeliverableDetails,
+                selectedQuestions: Array.from(updatedSelections),
+                weights,
+                totalWeight: calculatedTotalWeight,
+                uniqueResult: updatedUniqueResult
+            }));
+        }
+    };
+
     const handleDeliverableChange = (deliverableId: string, newValue: any) => {
         setDeliverableDetails((prev) => {
             const newDetails = { ...prev, [deliverableId]: { value: newValue } };
-            updateAnswersField(selectedQuestions);
             return newDetails;
         });
     };

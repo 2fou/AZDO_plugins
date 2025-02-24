@@ -2,8 +2,10 @@ import * as React from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { IProjectPageService, getClient, CommonServiceIds } from 'azure-devops-extension-api';
 import { WorkItemTrackingRestClient, WorkItem } from 'azure-devops-extension-api/WorkItemTracking';
-import { showRootComponent, decodeHtmlEntities } from '../Common/Common';
+import { showRootComponent, decodeHtmlEntities, AnswerData } from '../Common/Common';
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
+import { ILocationService } from 'azure-devops-extension-api/Common';
+import { CoreRestClient } from 'azure-devops-extension-api/Core';
 
 interface WorkItemProgress {
     id: number;
@@ -21,6 +23,7 @@ interface IState {
     workItemsProgress: WorkItemProgress[];
     filterStatus: string | null;
     availableStatuses: string[]; // New state for holding dynamic statuses
+    projectName: string; 
 }
 
 interface IWidgetSettings {
@@ -39,22 +42,39 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             error: null,
             workItemsProgress: [],
             filterStatus: null,
-            availableStatuses: [] // Initialize an empty array for statuses
+            availableStatuses: [], // Initialize an empty array for statuses
+            projectName: '' // Initialize the project name as an empty string
         };
         // Bind methods to ensure the proper `this` context
         this.mapWorkItemToProgress = this.mapWorkItemToProgress.bind(this);
+        
     }
 
+    private organizationUrl: string = '';
     componentDidMount() {
         console.log("Component mounted, initializing SDK...");
-        SDK.init().then(() => {
+        SDK.init().then(async () => {
             SDK.register('query-and-field-dashboard-widget', this);
             console.log("SDK initialized and widget registered.");
+            await this.fetchOrganizationUrl(); // Call the method here            
         });
     }
 
+    private async fetchOrganizationUrl() {
+        console.log("Fetching organization URL...");
+        try {
+            const locationService = await SDK.getService<ILocationService>(CommonServiceIds.LocationService);
+            const orgUrl = await locationService.getResourceAreaLocation(CoreRestClient.RESOURCE_AREA_ID);
+            this.organizationUrl = orgUrl;
+            console.log('Organization URL fetched:', orgUrl);
+        } catch (error) {
+            console.error('Error fetching organization URL:', error);
+            throw error; // Propagate error to handle it where called
+        }
+    }
+
     render(): JSX.Element {
-        const { title, loading, error, workItemsProgress, filterStatus, availableStatuses } = this.state;
+        const { title, loading, error, workItemsProgress, filterStatus, availableStatuses, projectName } = this.state;
 
         if (loading) {
             return <div>Loading work item progress...</div>;
@@ -83,7 +103,7 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
                 ) : (
                     workItemsProgress
                         .filter(item => !filterStatus || item.status === filterStatus)
-                        .map(({ id, title, progress, completed, total }) => (
+                        .map(({ id, title, progress, completed, total, status }) => (
                             <div key={id}>
                                 <h4>{title}</h4>
                                 <div style={{ width: '100%', backgroundColor: '#e0e0e0', borderRadius: '8px', marginBottom: '10px' }}>
@@ -96,7 +116,15 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
                                         }}
                                     />
                                 </div>
-                                <div>{`Work Item ID: ${id}, Progress: ${progress.toFixed(2)}%, Completed ${completed} out of ${total}`}</div>
+                                <div>
+                                    <a
+                                        href={`${this.organizationUrl}/${projectName}/_workitems/edit/${id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        Work Item ID: {id}
+                                    </a>, Progress: {progress.toFixed(2)}%, Completed {completed} out of {total}
+                                </div>
                             </div>
                         ))
                 )}
@@ -136,7 +164,9 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             const projectInfo = await this.fetchProjectInfo();
             if (projectInfo) {
                 console.log("Project info fetched:", projectInfo);
-                await this.fetchAvailableStatuses(projectInfo.id); // Fetch statuses first
+                // Save the project name in the state
+                this.setState({ projectName: projectInfo.name });
+                await this.fetchAvailableStatuses(projectInfo.id); 
                 await this.fetchAndProcessWorkItems(projectInfo.id);
             } else {
                 console.warn("No project info found.");
@@ -205,7 +235,9 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         }
     }
 
-   private mapWorkItemToProgress = (workItem: WorkItem): WorkItemProgress => {
+
+// Modified mapWorkItemToProgress method
+private readonly mapWorkItemToProgress = (workItem: WorkItem): WorkItemProgress => {
     try {
         const fieldData = workItem.fields['Custom.AnswersField'];
         const status = workItem.fields['System.State'];
@@ -239,32 +271,21 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         status: status || "Unknown"
     };
 };
-    private calculateProgress(fieldData: any): { completedEntriesCount: number, totalQuestionCount: number } {
-        const decodedValue = decodeHtmlEntities(fieldData as string);
-        const answers = JSON.parse(decodedValue);
 
-        if (!answers?.data) {
-            throw new Error("Decoded answers are undefined or incorrectly structured.");
-        }
+// Modified calculateProgress method
+private calculateProgress(fieldData: any): { completedEntriesCount: number, totalQuestionCount: number } {
+    const decodedValue = decodeHtmlEntities(fieldData as string);
+    const data: AnswerData = JSON.parse(decodedValue); // Assume AnswerData type used as in TestProgressIndicator
 
-        let completedEntriesCount = 0;
-        let totalQuestionCount = 0;
-
-        // Iterate over each question in the "data" object
-        for (const answerKey in answers.data) {
-            const answer = answers.data[answerKey];
-
-            if (answer.checked) {
-                // Count the number of '1's in the binary representations of `uniqueResult` and `totalWeight`
-                completedEntriesCount = (answer.uniqueResult || 0).toString(2).split('1').length - 1;
-                totalQuestionCount = (answer.totalWeight || 0).toString(2).split('1').length - 1;
-
-                break; // Since only the checked entry determines the completeness
-            }
-        }
-
-        return { completedEntriesCount, totalQuestionCount };
+    if (!data) {
+        throw new Error("Decoded data is undefined or incorrectly structured.");
     }
+
+    const completedEntriesCount = (data.uniqueResult || 0).toString(2).split('1').length - 1;
+    const totalQuestionCount = (data.totalWeight || 0).toString(2).split('1').length - 1;
+
+    return { completedEntriesCount, totalQuestionCount };
+}
 }
 
 showRootComponent(<QueryAndFieldDashboardWidget />, "query-and-field-dashboard-root");

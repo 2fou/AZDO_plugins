@@ -2,121 +2,162 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import * as SDK from 'azure-devops-extension-sdk';
 import { IWorkItemFormService, WorkItemTrackingServiceIds } from 'azure-devops-extension-api/WorkItemTracking';
-import { decodeHtmlEntities,  showRootComponent } from '../Common/Common';
+import { decodeHtmlEntities, showRootComponent, Version, Question, AnswerData } from '../Common/Common';
+import { CommonServiceIds, IExtensionDataService } from 'azure-devops-extension-api';
+
+console.log("Initializing SDK...");
+SDK.init();
 
 
-
-interface Question {
-    id: string;
-    text: string;
-    expectedEntries: {
-      count: number;
-      labels: string[];
-      types: string[];
-      weights: number[]; // Ensure this is defined at the entry level
-    };
-  }
-  
-  interface EntryDetail {
-    label: string;
-    type: string;
-    value: string | boolean;
-    weight: number;
-  }
-  
-  interface AnswerDetail {
-    questionText: string;
-    entries: EntryDetail[];
-    uniqueResult?: number; // Unique result per question
-    totalWeight?: number;  // Add this line
-  };
-  
-   interface AnswerData {
-    versionIndex: number;
-    data: { [questionId: string]: AnswerDetail & { checked?: boolean } };
-  };
-  
 const ProgressIndicator: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const [questionsProgress, setQuestionsProgress] = useState<Array<{ questionText: string, progress: number }>>([]);
+    const [versionData, setVersionData] = useState<Version | null>(null);
+    const [answerData, setAnswerData] = useState<AnswerData | null>(null);
+
+
+
+
+useEffect(() => {
+    const initializeSDK = async () => {
+        try {
+            setLoading(true);
+
+
+            console.log("SDK Initialized!");
+            await SDK.ready();
+
+            console.log("SDK Ready!");
+
+            const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
+
+            console.log("WorkItemFormService obtained!");
+
+            // Load initial field value
+            await loadFieldValue(workItemFormService);
+
+            // Register the field change handler with a unique registeredObjectId
+            const registeredObjectId = 'progress-indicator-object';
+            
+            console.log("Registering object with ID:", registeredObjectId);
+
+            SDK.register(SDK.getContributionId(), {
+                registeredObjectId,
+                onFieldChanged: async (args: any) => {
+                    if (args.changedFields['Custom.AnswersField'] !== undefined) {
+                        console.log("Custom.AnswersField changed:", args.changedFields['Custom.AnswersField']);
+                        await loadFieldValue(workItemFormService);
+                    }
+                }
+            });
+
+        } catch (initError) {
+            console.error("Error initializing component:", initError);
+            setError("Failed to initialize component.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const loadFieldValue = async (workItemFormService: IWorkItemFormService) => {
+        try {
+            const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true });
+            handleFieldValueChange(fieldValue);
+        } catch (error) {
+            console.error("Error loading field value:", error);
+            setError("Failed to load field data.");
+        }
+    };
+
+    initializeSDK();
+}, []);
+    
+    const handleFieldValueChange = async (fieldValue: any) => {
+        if (fieldValue) {
+            try {
+                const decodedValue = decodeHtmlEntities(fieldValue as string);
+                console.log("Decoded field value:", decodedValue);
+    
+                const data: AnswerData = JSON.parse(decodedValue);
+                console.log("Parsed AnswerData:", data);
+    
+                setAnswerData(data);
+                await fetchVersionData(data.version);
+            } catch (parseError) {
+                console.error("Error parsing answers:", parseError);
+                setError("Error parsing answers.");
+            }
+        } else {
+            setError("No field value found.");
+        }
+    };
 
     useEffect(() => {
-        const initializeSDK = async () => {
-            console.log("Initializing SDK...");
-            await SDK.init();
-            console.log("SDK Initialized!");
+        if (versionData && answerData) {
+            console.log("Both versionData and answerData are available, proceeding to calculate progress.");
 
-            try {
-                setLoading(true);
-                await SDK.ready();
-                console.log("SDK Ready");
+            const progressData = calculateProgress(answerData);
+            setQuestionsProgress(progressData);
 
-                const workItemFormService = await SDK.getService<IWorkItemFormService>(WorkItemTrackingServiceIds.WorkItemFormService);
-                console.log("WorkItemFormService obtained");
+            console.log("Calculated Progress Data:", progressData);
+        } else {
+            console.log("Either versionData or answerData is not available. Current values:", { versionData, answerData });
+        }
+    }, [versionData, answerData]);
 
-                const loadProgress = async () => {
-                    const fieldValue = await workItemFormService.getFieldValue('Custom.AnswersField', { returnOriginalValue: true });
-                    console.log("Field value obtained:", fieldValue);
+    const fetchVersionData = async (versionDescription: string) => {
+        console.log("Fetching version data for:", versionDescription);
 
-                    if (fieldValue) {
-                        try {
-                            const decodedValue = decodeHtmlEntities(fieldValue as string);
-                            console.log("Decoded value:", decodedValue);
+        const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
+        const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
+        console.log("Obtained Extension DataService Manager.");
 
-                            const data = JSON.parse(decodedValue);
+        const questionVersions: Version[] = await dataManager.getValue('questionaryVersions', { scopeType: 'Default' }) || [];
+        console.log("Fetched question versions:", questionVersions);
 
-                            const answersData: AnswerData = data;
+        const selectedVersion = questionVersions.find(v => v.description === versionDescription);
+        console.log("Selected Version:", selectedVersion);
 
-                            const progressData = Object.entries(answersData.data)
-                                .map(([key, answer]) => mapAnswerToProgress(answer))
-                                .filter(({ progress }) => progress > 0);
+        if (selectedVersion) {
+            setVersionData(selectedVersion);
+            console.log("Version data successfully set:", selectedVersion);
+        } else {
+            console.warn("No matching version found for the description:", versionDescription);
+        }
+    };
 
-                            console.log("Filtered Progress data:", progressData);
-                            setQuestionsProgress(progressData);
-                        } catch (parseError) {
-                            console.error("Error parsing answers:", parseError);
-                            setError("Error parsing answers.");
-                        }
-                    } else {
-                        setError("No field value found.");
-                    }
+    const calculateProgress = (answerData: AnswerData) => {
+        console.log("Calculating progress...");
+
+        if (!versionData) {
+            console.log("No version data available.");
+            return [];
+        }
+
+        try {
+            const answeredQuestions = answerData.uniqueResult.toString(2).split('1').length - 1;
+            const totalQuestions = answerData.totalWeight.toString(2).split('1').length - 1;
+            const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+
+            console.log(`Answered Questions: ${answeredQuestions}, Total Questions: ${totalQuestions}, Progress: ${progress}`);
+
+            return versionData.questions.map((question: Question) => {
+                const questionProgress = answerData.selectedQuestions.includes(question.id) ? progress : 0;
+
+                return {
+                    questionText: question.text,
+                    progress: questionProgress
                 };
-
-                await loadProgress();
-                SDK.register(SDK.getContributionId(), async () => {
-                    await loadProgress();
-                });
-
-            } catch (error) {
-                console.error("Error initializing component:", error);
-                setError("Failed to initialize component.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        initializeSDK();
-    }, []);
-
-    const mapAnswerToProgress = (answer: AnswerDetail) => {
-        const answeredQuestions = answer.uniqueResult ? answer.uniqueResult.toString(2).split('1').length - 1 : 0;
-        const totalBinaryWeight = answer.totalWeight ?? 0;
-
-        const totalQuestions = totalBinaryWeight.toString(2).split('1').length - 1;
-        const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
-
-        // Use a label from the first entry as the question text or default to "Unknown"
-        const questionText = answer.entries.length > 0 ? answer.entries[0].label : 'Unknown Question';
-
-        return {
-            questionText,
-            progress
-        };
+            });
+        } catch (error) {
+            console.error("Error during progress calculation:", error);
+            return [];
+        }
     };
 
     const calculateColor = (progress: number) => {
-        const hue = 120 * (progress / 100);  // Gradient from green to red
+        const hue = 120 * (progress / 100);
         return `hsl(${hue}, 100%, 50%)`;
     };
 

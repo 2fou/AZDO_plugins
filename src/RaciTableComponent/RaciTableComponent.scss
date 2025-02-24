@@ -1,29 +1,19 @@
 .raci-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
-
-    th, td {
-        border: 1px solid #ccc;
-        padding: 8px;
-        text-align: center;
-    }
-
-    th {
-        background-color: #f4f4f4;
-    }
-
-    .raci-R, .raci-A, .raci-C, .raci-I {
-        display: inline-block;
-        width: 20px;
-        margin: 2px;
-        padding: 2px;
-        border-radius: 4px;
-        color: #fff;
-    }
-
-    .raci-R { background-color: #f44336; } /* Red */
-    .raci-A { background-color: #2196F3; } /* Blue */
-    .raci-C { background-color: #ffeb3b; color: #000; } /* Yellow */
-    .raci-I { background-color: #4CAF50; } /* Green */
 }
+
+.raci-table th {
+    background-color: #f4f4f4;
+    border-bottom: 2px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.raci-table td {
+    padding: 8px;
+    border-right: 1px solid #ddd;
+    vertical-align: top;
+}
+
+// Additional table styling can be added here

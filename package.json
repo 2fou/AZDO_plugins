@@ -27,7 +27,8 @@
     "azure-devops-ui": "^2.167.63",
     "office-ui-fabric-react": "^7.204.0",
     "react": "~16.13.1",
-    "react-dom": "~16.13.1"
+    "react-dom": "~16.13.1",
+    "use-debounce": "^10.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.21.8",

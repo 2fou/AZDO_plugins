@@ -5,17 +5,10 @@ import { Dropdown } from 'azure-devops-ui/Dropdown';
 import { DropdownSelection } from 'azure-devops-ui/Utilities/DropdownSelection';
 import { Checkbox } from 'azure-devops-ui/Checkbox';
 import { Button } from 'azure-devops-ui/Button';
-import { Deliverable, RoleAssignment, showRootComponent, decodeHtmlEntities, Question, Version } from '../Common/Common';
+import { Deliverable, RoleAssignment, showRootComponent, decodeHtmlEntities, Question, Version, Role } from '../Common/Common';
 import { CommonServiceIds, IExtensionDataService } from 'azure-devops-extension-api';
 
-interface Role {
-    id: string;
-    name: string;
-    description: string;
-    personName: string;
-    department: string;
-    email: string;
-}
+
 
 const RaciExtensionComponent: React.FC = () => {
     const [workItemFormService, setWorkItemFormService] = useState<IWorkItemFormService | null>(null);

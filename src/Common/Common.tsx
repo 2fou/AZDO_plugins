@@ -10,26 +10,6 @@ export function showRootComponent(component: React.ReactElement<any>, containerI
 
 
 
-
-
-
-
-
-
-export const normalizeQuestions = (loadedQuestions: any[]): Question[] => {
-  return loadedQuestions.map(question => ({
-    id: question.id || "",
-    text: question.text || "",
-    expectedEntries: {
-      count: question.expectedEntries?.count || 1,
-      labels: question.expectedEntries?.labels || Array(question.expectedEntries?.count || 1).fill(""),
-      types: question.expectedEntries?.types || Array(question.expectedEntries?.count || 1).fill("url"),
-      weights: question.expectedEntries?.weights || Array(question.expectedEntries?.count || 1).fill(1) // Default weight
-    },
-    linkedDeliverables: question.linkedDeliverables || []
-  }));
-};
-
 export const decodeHtmlEntities = (str: string): string => {
   if (!str) return str;
   return str.replace(/&quot;/g, '"')
@@ -56,18 +36,26 @@ export interface Question {
   linkedDeliverables: string[];
 };
 
+export interface Role {
+  id: string;
+  name: string;
+  description: string;
+  personName: string;
+  department: string;
+  email: string;
+}
+
 export interface RoleAssignment {
   roleId: string;
   raci: string;
 };
 
-// src/utils/roleUtils.ts
-import * as SDK from 'azure-devops-extension-sdk';
-import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
-
-export const fetchRoles = async () => {
-  const extDataService = await SDK.getService<IExtensionDataService>(CommonServiceIds.ExtensionDataService);
-  const dataManager = await extDataService.getExtensionDataManager(SDK.getExtensionContext().id, await SDK.getAccessToken());
-  const rolesData = await dataManager.getValue<{ id: string, name: string }[]>('roles', { scopeType: 'Default' }) || [];
-  return rolesData;
+export interface AnswerData {
+  version: string;
+  deliverables: { [deliverableId: string]: { value: string | boolean } };
+  selectedQuestions: string[];
+  weights: number[];
+  totalWeight: number;
+  uniqueResult: number;
 };
+
