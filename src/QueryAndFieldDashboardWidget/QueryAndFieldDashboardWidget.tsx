@@ -6,6 +6,18 @@ import { showRootComponent, decodeHtmlEntities, AnswerData } from '../Common/Com
 import * as Dashboard from "azure-devops-extension-api/Dashboard";
 import { ILocationService } from 'azure-devops-extension-api/Common';
 import { CoreRestClient } from 'azure-devops-extension-api/Core';
+import { Pie } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    ArcElement,
+    Tooltip,
+    Legend
+} from 'chart.js';
+import { ChartEvent, ActiveElement } from 'chart.js';
+
+
+// Register required Chart.js components
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface WorkItemProgress {
     id: number;
@@ -13,7 +25,7 @@ interface WorkItemProgress {
     progress: number;
     completed: number;
     total: number;
-    status: string; // Added for filtering purposes
+    status: string;
 }
 
 interface IState {
@@ -22,15 +34,15 @@ interface IState {
     error: string | null;
     workItemsProgress: WorkItemProgress[];
     filterStatus: string | null;
-    availableStatuses: string[]; // New state for holding dynamic statuses
-    projectName: string; 
+    availableStatuses: string[];
+    projectName: string;
+    displayPieChart: boolean; // New state for toggling pie chart
 }
 
 interface IWidgetSettings {
     customSettings: {
         data: string;
     };
-
 }
 
 class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implements Dashboard.IConfigurableWidget {
@@ -42,21 +54,22 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             error: null,
             workItemsProgress: [],
             filterStatus: null,
-            availableStatuses: [], // Initialize an empty array for statuses
-            projectName: '' // Initialize the project name as an empty string
+            availableStatuses: [],
+            projectName: '',
+            displayPieChart: false // Initialize pie chart display state
         };
-        // Bind methods to ensure the proper `this` context
         this.mapWorkItemToProgress = this.mapWorkItemToProgress.bind(this);
-        
+        this.togglePieChart = this.togglePieChart.bind(this); // Bind the new method
     }
 
     private organizationUrl: string = '';
+
     componentDidMount() {
         console.log("Component mounted, initializing SDK...");
         SDK.init().then(async () => {
             SDK.register('query-and-field-dashboard-widget', this);
             console.log("SDK initialized and widget registered.");
-            await this.fetchOrganizationUrl(); // Call the method here            
+            await this.fetchOrganizationUrl();
         });
     }
 
@@ -69,24 +82,46 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             console.log('Organization URL fetched:', orgUrl);
         } catch (error) {
             console.error('Error fetching organization URL:', error);
-            throw error; // Propagate error to handle it where called
+            throw error;
         }
     }
 
-    render(): JSX.Element {
-        const { title, loading, error, workItemsProgress, filterStatus, availableStatuses, projectName } = this.state;
+    togglePieChart() {
+        this.setState((prevState) => ({
+            displayPieChart: !prevState.displayPieChart
+        }));
+    }
 
-        if (loading) {
-            return <div>Loading work item progress...</div>;
-        }
+    renderPieChart() {
+        const { workItemsProgress } = this.state;
+        const data = {
+            labels: workItemsProgress.map(item => item.title),
+            datasets: [{
+                data: workItemsProgress.map(item => item.progress),
+                backgroundColor: workItemsProgress.map(() => '#' + Math.floor(Math.random()*16777215).toString(16))
+            }]
+        };
+        const options = {
+            onClick: (event: ChartEvent, elements: ActiveElement[]) => {
+                if (elements.length > 0) {
+                    const [{ index }] = elements;
+                    const { workItemsProgress, projectName } = this.state; // Access the state properties
+                    const workItem = workItemsProgress[index];
+                    if (workItem) {
+                        window.open(`${this.organizationUrl}/${projectName}/_workitems/edit/${workItem.id}`, '_blank');
+                    }
+                }
+            },
+        };
 
-        if (error) {
-            return <div>Error: {error}</div>;
-        }
+        return <Pie data={data} options={options} />;
+    }
+
+    renderListView() {
+        const { workItemsProgress, filterStatus, availableStatuses, projectName } = this.state;
 
         return (
             <div>
-                <h3>{title || "Work Item Progress"}</h3>
                 <label htmlFor="statusFilter">Filter by Status: </label>
                 <select
                     id="statusFilter"
@@ -132,6 +167,28 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         );
     }
 
+    render() {
+        const { title, loading, error, displayPieChart } = this.state;
+
+        if (loading) {
+            return <div>Loading work item progress...</div>;
+        }
+
+        if (error) {
+            return <div>Error: {error}</div>;
+        }
+
+        return (
+            <div>
+                <h3>{title || "Work Item Progress"}</h3>
+                <button onClick={this.togglePieChart}>
+                    {displayPieChart ? 'View as List' : 'View as Pie Chart'}
+                </button>
+                {displayPieChart ? this.renderPieChart() : this.renderListView()}
+            </div>
+        );
+    }
+
     async preload(): Promise<Dashboard.WidgetStatus> {
         console.log("Preloading widget...");
         return Dashboard.WidgetStatusHelper.Success();
@@ -164,7 +221,6 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
             const projectInfo = await this.fetchProjectInfo();
             if (projectInfo) {
                 console.log("Project info fetched:", projectInfo);
-                // Save the project name in the state
                 this.setState({ projectName: projectInfo.name });
                 await this.fetchAvailableStatuses(projectInfo.id); 
                 await this.fetchAndProcessWorkItems(projectInfo.id);
@@ -235,57 +291,54 @@ class QueryAndFieldDashboardWidget extends React.Component<{}, IState> implement
         }
     }
 
+    private readonly mapWorkItemToProgress = (workItem: WorkItem): WorkItemProgress => {
+        try {
+            const fieldData = workItem.fields['Custom.AnswersField'];
+            const status = workItem.fields['System.State'];
 
-// Modified mapWorkItemToProgress method
-private readonly mapWorkItemToProgress = (workItem: WorkItem): WorkItemProgress => {
-    try {
-        const fieldData = workItem.fields['Custom.AnswersField'];
-        const status = workItem.fields['System.State'];
+            if (fieldData) {
+                const { completedEntriesCount, totalQuestionCount } = this.calculateProgress(fieldData);
+                const progress = totalQuestionCount > 0 ? (completedEntriesCount / totalQuestionCount) * 100 : 0;
 
-        if (fieldData) {
-            const { completedEntriesCount, totalQuestionCount } = this.calculateProgress(fieldData);
-            const progress = totalQuestionCount > 0 ? (completedEntriesCount / totalQuestionCount) * 100 : 0;
-
-            console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
-            return {
-                id: workItem.id,
-                title: workItem.fields['System.Title'] || "Untitled",
-                progress,
-                completed: completedEntriesCount,
-                total: totalQuestionCount,
-                status
-            };
-        } else {
-            console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
+                console.log(`Work item ID ${workItem.id} mapped with progress: ${progress.toFixed(2)}%`);
+                return {
+                    id: workItem.id,
+                    title: workItem.fields['System.Title'] || "Untitled",
+                    progress,
+                    completed: completedEntriesCount,
+                    total: totalQuestionCount,
+                    status
+                };
+            } else {
+                console.warn(`Work item ID ${workItem.id} does not have the 'Custom.AnswersField' field.`);
+            }
+        } catch (error) {
+            console.error("Error mapping work item to progress:", error);
         }
-    } catch (error) {
-        console.error("Error mapping work item to progress:", error);
-    }
 
-    return {
-        id: workItem.id,
-        title: workItem.fields['System.Title'] || "Untitled",
-        progress: 0,
-        completed: 0,
-        total: 0,
-        status: status || "Unknown"
+        return {
+            id: workItem.id,
+            title: workItem.fields['System.Title'] || "Untitled",
+            progress: 0,
+            completed: 0,
+            total: 0,
+            status: status || "Unknown"
+        };
     };
-};
 
-// Modified calculateProgress method
-private calculateProgress(fieldData: any): { completedEntriesCount: number, totalQuestionCount: number } {
-    const decodedValue = decodeHtmlEntities(fieldData as string);
-    const data: AnswerData = JSON.parse(decodedValue); // Assume AnswerData type used as in TestProgressIndicator
+    private calculateProgress(fieldData: any): { completedEntriesCount: number, totalQuestionCount: number } {
+        const decodedValue = decodeHtmlEntities(fieldData as string);
+        const data: AnswerData = JSON.parse(decodedValue);
 
-    if (!data) {
-        throw new Error("Decoded data is undefined or incorrectly structured.");
+        if (!data) {
+            throw new Error("Decoded data is undefined or incorrectly structured.");
+        }
+
+        const completedEntriesCount = (data.uniqueResult || 0).toString(2).split('1').length - 1;
+        const totalQuestionCount = (data.totalWeight || 0).toString(2).split('1').length - 1;
+
+        return { completedEntriesCount, totalQuestionCount };
     }
-
-    const completedEntriesCount = (data.uniqueResult || 0).toString(2).split('1').length - 1;
-    const totalQuestionCount = (data.totalWeight || 0).toString(2).split('1').length - 1;
-
-    return { completedEntriesCount, totalQuestionCount };
-}
 }
 
 showRootComponent(<QueryAndFieldDashboardWidget />, "query-and-field-dashboard-root");
