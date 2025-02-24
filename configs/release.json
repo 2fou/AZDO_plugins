@@ -1,20 +1,8 @@
 {
   "id": "feature-livrable-extension",
   "public": false,
-  "version": "1.0.231",
+  "version": "1.0.239",
   "contributions": [
-    {
-      "id": "configuration",
-      "type": "ms.vss-web.hub",
-      "targets": [
-        "ms.vss-web.project-admin-hub-group"
-      ],
-      "properties": {
-        "name": "Questionnaire Configuration",
-        "order": 99,
-        "uri": "dist/TestConfigurationPage/TestConfigurationPage.html"
-      }
-    },
     {
       "id": "role-configuration",
       "type": "ms.vss-web.hub",
@@ -25,6 +13,42 @@
         "name": "Role Configuration",
         "order": 98,
         "uri": "dist/RoleConfigurationPage/RoleConfigurationPage.html"
+      }
+    },
+    {
+      "id": "deliverables-configuration",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-web.project-admin-hub-group"
+      ],
+      "properties": {
+        "name": "Deliverable Configuration",
+        "order": 97,
+        "uri": "dist/DeliveryConfigurationPage/DeliveryConfigurationPage.html"
+      }
+    },
+    {
+      "id": "questionay-configuration",
+      "type": "ms.vss-web.hub",
+      "targets": [
+        "ms.vss-web.project-admin-hub-group"
+      ],
+      "properties": {
+        "name": "Questionary Configuration",
+        "order": 97,
+        "uri": "dist/QuestionaryConfigurationPage/QuestionaryConfigurationPage.html"
+      }
+    },
+    {
+      "id": "deliverables-control",
+      "type": "ms.vss-work-web.work-item-form-control",
+      "targets": [
+        "ms.vss-work-web.work-item-form"
+      ],
+      "properties": {
+        "name": "Deliverables Control",
+        "uri": "dist/DeliverablesComponent/DeliverablesComponent.html",
+        "height": 500
       }
     },
     {
@@ -58,21 +82,10 @@
         "ms.vss-work-web.work-item-form"
       ],
       "properties": {
+        "registeredObjectId": "progress-indicator-object",
         "name": "Progress Indicator",
         "uri": "dist/TestProgressIndicator/TestProgressIndicator.html",
         "height": 300
-      }
-    },
-    {
-      "id": "livrable-control",
-      "type": "ms.vss-work-web.work-item-form-control",
-      "targets": [
-        "ms.vss-work-web.work-item-form"
-      ],
-      "properties": {
-        "name": "Deliverable Control",
-        "uri": "dist/TestExtensionComponent/TestExtensionComponent.html",
-        "height": 500
       }
     },
     {
@@ -114,7 +127,6 @@
         "ms.vss-dashboards-web.widget-catalog"
       ],
       "properties": {
-        "registeredObjectId": "work-item-toolbar-menu",
         "name": "Query and Field Dashboard Widget",
         "uri": "dist/QueryAndFieldDashboardWidget/QueryAndFieldDashboardWidget.html",
         "description": "Risk Profile Matrice",
