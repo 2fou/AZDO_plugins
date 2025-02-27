@@ -114,7 +114,7 @@ const DeliverablesComponent: React.FC = () => {
     const updateUniqueResult = (calculatedTotalWeight: number) => {
         let result = 0;
         getUniqueDeliverablesForSelectedQuestions().forEach((deliverable, index) => {
-            if (deliverableDetails[deliverable.id] && deliverableDetails[deliverable.id].value) {
+            if (deliverableDetails[deliverable.id]?.value) {
                 result += Math.pow(2, index);
             }
         });
@@ -124,7 +124,7 @@ const DeliverablesComponent: React.FC = () => {
     };
 
     const updateAnswersField = (updatedSelections: Set<string>, updatedDeliverableDetails: { [deliverableId: string]: DeliverableDetail }, calculatedTotalWeight: number, updatedUniqueResult: number) => {
-        const currentVersionDescription = currentVersion?.description || '';
+        const currentVersionDescription = currentVersion?.description ?? '';
 
         if (workItemFormService) {
             workItemFormService.setFieldValue('Custom.AnswersField', JSON.stringify({
