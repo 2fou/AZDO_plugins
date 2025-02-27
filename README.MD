@@ -83,11 +83,11 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
         <img src="/src/ScreenShot/image-4.png" alt="RACI" /> 
         ![Export](/dist/ScreenShot/image-4.png)
  - Define the deliverables through project/setting/extension
-        <img src="/src/ScreenShot/2025-02-27 14_09_27-Clipboard.png" alt="Deliverables" /> 
-        ![Export](/dist/ScreenShot/2025-02-27 14_09_27-Clipboard.png)
+        <img src="/src/ScreenShot/DeliverableConfig.png" alt="Deliverables" /> 
+        ![Export](/dist/ScreenShot/DeliverableConfig.png)
  - Define the Questionary through project/setting/extension
-        <img src="/src/ScreenShot/Set you questionary.png" alt="Questionary" /> 
-        ![Export](/dist/ScreenShot/Set you questionary.png)
+        <img src="/src/ScreenShot/Setyouquestionary.png" alt="Questionary" /> 
+        ![Export](/dist/ScreenShot/Setyouquestionary.png)
  - Define the Questionary and assign deliverables
         <img src="/src/ScreenShot/AssignDeliverables.png" alt="Questionary & Assign deliverables" /> 
         ![Export](/dist/ScreenShot/AssignDeliverables.png)
@@ -109,8 +109,8 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
         <img src="/src/ScreenShot/image-10.png" alt="Fill out questionary" /> 
         ![Export](/dist/ScreenShot/image-10.png)
 - Fill out the questionnaire as you need.
-        <img src="/src/ScreenShot/Risk Profile Matrice.png" alt="Fill out questionary" /> 
-        ![Export](/dist/ScreenShot/Risk Profile Matrice.png)
+        <img src="/src/ScreenShot/RiskProfileMatrice.png" alt="Fill out questionary" /> 
+        ![Export](/dist/ScreenShot/RiskProfileMatrice.png)
 - Once you have previously set the roles, you can start to set the RACI
         <img src="/src/ScreenShot/image-13.png" alt="Set the Roles" /> 
         ![Export](/dist/ScreenShot/image-13.png)
