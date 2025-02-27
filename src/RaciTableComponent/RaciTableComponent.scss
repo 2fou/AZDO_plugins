@@ -1,19 +1,41 @@
+/* RaciTableComponent.scss */
 .raci-table {
-    width: 100%;
-    border-collapse: collapse;
+  border-collapse: collapse;
+  width: 100%;
+}
+.raci-table th, .raci-table td {
+  border: 1px solid #ddd;
+  text-align: left;
+  padding: 8px;
+}
+.raci-table .duty-r,
+.raci-table .duty-a,
+.raci-table .duty-c,
+.raci-table .duty-i {
+  display: inline-block; /* Allows padding and centering */
+  padding: 4px 8px; /* Add padding around the letter */
+  border-radius: 4px; /* Round the corners */
+  font-size: 1.2em; /* Larger font size */
+  text-align: center; /* Center the letter */
+  margin-right: 4px; /* Space between letters if multiple duties in a cell */
 }
 
-.raci-table th {
-    background-color: #f4f4f4;
-    border-bottom: 2px solid #ddd;
-    padding: 8px;
-    text-align: left;
+.raci-table .duty-r {
+  background-color: #ffdddd; /* Light red background */
+  color: #ff0000; /* Red text */
 }
 
-.raci-table td {
-    padding: 8px;
-    border-right: 1px solid #ddd;
-    vertical-align: top;
+.raci-table .duty-a {
+  background-color: #ddffdd; /* Light green background */
+  color: #00ff00; /* Green text */
 }
 
-// Additional table styling can be added here
+.raci-table .duty-c {
+  background-color: #ddddff; /* Light blue background */
+  color: #0000ff; /* Blue text */
+}
+
+.raci-table .duty-i {
+  background-color: #ffffdd; /* Light yellow background */
+  color: #ffff00; /* Yellow text */
+}

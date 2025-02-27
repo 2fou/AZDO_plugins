@@ -82,10 +82,16 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
  - "RACI Control" is used to assign roles and responsabilities to each deliveries
         <img src="/src/ScreenShot/image-4.png" alt="RACI" /> 
         ![Export](/dist/ScreenShot/image-4.png)
- - "RACI TABLE" shows the RACI Table visually
-- Add questions to the project through project/setting/extension
-        <img src="/src/ScreenShot/image-5.png" alt="Questionary" /> 
-        ![Export](/dist/ScreenShot/image-5.png)
+ - Define the deliverables through project/setting/extension
+        <img src="/src/ScreenShot/2025-02-27 14_09_27-Clipboard.png" alt="Deliverables" /> 
+        ![Export](/dist/ScreenShot/2025-02-27 14_09_27-Clipboard.png)
+ - Define the Questionary through project/setting/extension
+        <img src="/src/ScreenShot/Set you questionary.png" alt="Questionary" /> 
+        ![Export](/dist/ScreenShot/Set you questionary.png)
+ - Define the Questionary and assign deliverables
+        <img src="/src/ScreenShot/AssignDeliverables.png" alt="Questionary & Assign deliverables" /> 
+        ![Export](/dist/ScreenShot/AssignDeliverables.png)
+
 - Set the contribution "work item setup"
         <img src="/src/ScreenShot/image-6.png" alt="Workitem Setup" /> 
         ![Export](/dist/ScreenShot/image-6.png)
@@ -102,12 +108,9 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
 - Use the integrated tab to fill out the questionnaire.
         <img src="/src/ScreenShot/image-10.png" alt="Fill out questionary" /> 
         ![Export](/dist/ScreenShot/image-10.png)
-- Save your responses, and they will persist in the associated work item custom field.
-        <img src="/src/ScreenShot/image-11.png" alt="See answsers" /> 
-        ![Export](/dist/ScreenShot/image-11.png)
-- Here I kept it visible to see the Json response
-        <img src="/src/ScreenShot/image-12.png" alt="See answsers" /> 
-        ![Export](/dist/ScreenShot/image-12.png)
+- Fill out the questionnaire as you need.
+        <img src="/src/ScreenShot/Risk Profile Matrice.png" alt="Fill out questionary" /> 
+        ![Export](/dist/ScreenShot/Risk Profile Matrice.png)
 - Once you have previously set the roles, you can start to set the RACI
         <img src="/src/ScreenShot/image-13.png" alt="Set the Roles" /> 
         ![Export](/dist/ScreenShot/image-13.png)
