@@ -4,9 +4,9 @@ import { TextField } from 'azure-devops-ui/TextField';
 import { IExtensionDataService, CommonServiceIds } from 'azure-devops-extension-api';
 import * as SDK from 'azure-devops-extension-sdk';
 import { Deliverable, Question, showRootComponent, Version } from '../Common/Common';
-
-
-
+// Import an icon library, e.g., Material Icons
+import { Icon } from 'azure-devops-ui/Icon';
+import { Label } from 'office-ui-fabric-react';
 
 const QuestionaryConfigurationPage: React.FC = () => {
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -72,8 +72,8 @@ const QuestionaryConfigurationPage: React.FC = () => {
     const loadVersion = (index: number) => {
         if (index >= 0 && index < versions.length) {
             const version = versions[index];
-            setQuestions(version.questions || []);  // Check for questions
-            setCurrentDescription(version.description || '');  // Provide a default for missing descriptions
+            setQuestions(version.questions || []); 
+            setCurrentDescription(version.description || '');
             setCurrentVersionIndex(index);
         }
     };
@@ -87,11 +87,10 @@ const QuestionaryConfigurationPage: React.FC = () => {
 
     const addQuestion = () => {
         if (newQuestionText.trim() !== '') {
-            const newQuestion: Question = { 
-                id: Date.now().toString(), 
-                text: newQuestionText, 
-                linkedDeliverables: [], 
-             
+            const newQuestion: Question = {
+                id: Date.now().toString(),
+                text: newQuestionText,
+                linkedDeliverables: [],
             };
             const updatedQuestions = [...questions, newQuestion];
             setQuestions(updatedQuestions);
@@ -136,6 +135,30 @@ const QuestionaryConfigurationPage: React.FC = () => {
         );
     };
 
+    const deleteVersion = async (versionIndex: number) => {
+        const dataManager = await getDataManager();
+
+        if (versionIndex >= 0 && versionIndex < versions.length) {
+            const updatedVersions = versions.filter((_, index) => index !== versionIndex);
+            setVersions(updatedVersions);
+
+            let newCurrentVersionIndex = null;
+            if (updatedVersions.length > 0) {
+                newCurrentVersionIndex = versionIndex > 0 ? versionIndex - 1 : 0;
+                loadVersionAndRefresh(newCurrentVersionIndex);
+            } else {
+                setQuestions([]);
+                setCurrentDescription('');
+            }
+
+            setCurrentVersionIndex(newCurrentVersionIndex);
+
+            await dataManager.setValue('questionaryVersions', updatedVersions, { scopeType: 'Default' });
+        } else {
+            alert("Invalid version index.");
+        }
+    };
+
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
             <h2>Questionary Configuration</h2>
@@ -167,6 +190,18 @@ const QuestionaryConfigurationPage: React.FC = () => {
                     }}
                 />
             </div>
+            <div className="delete-version">
+                <Button
+                    text="Delete Current Version"
+                    onClick={() => {
+                        if (currentVersionIndex !== null) {
+                            deleteVersion(currentVersionIndex);
+                        } else {
+                            alert("No version selected to delete.");
+                        }
+                    }}
+                />
+            </div>
             <div className="version-selector">
                 <h3>Select Version to Load</h3>
                 <select
@@ -186,7 +221,7 @@ const QuestionaryConfigurationPage: React.FC = () => {
             </div>
             <div className="question-list">
                 {questions.map(question => (
-                    <div key={question.id} style={{ marginBottom: '10px' }}>
+                    <div key={question.id} style={{ marginBottom: '10px', border: '1px solid #ccc', padding: '10px' }}>
                         <TextField
                             value={question.text}
                             onChange={(e, value) => updateQuestionText(question.id, value || '')}
@@ -194,6 +229,8 @@ const QuestionaryConfigurationPage: React.FC = () => {
                         <Button text="Delete" onClick={() => deleteQuestion(question.id)} />
 
                         <div>
+                            <Label>Related Deliverables:</Label>
+                            {/* Select for adding deliverables */}
                             <select data-question-id={question.id}>
                                 <option value="">Select Deliverable</option>
                                 {deliverables
@@ -215,12 +252,20 @@ const QuestionaryConfigurationPage: React.FC = () => {
                                 }}
                             />
 
+                            {/* List and remove added deliverables */}
                             <div>
-                                Linked Deliverables:
                                 {question.linkedDeliverables.map(deliverableId => (
-                                    <div key={deliverableId}>
-                                        {deliverables.find(d => d.id === deliverableId)?.label}
-                                        <Button text="Remove" onClick={() => removeDeliverableLink(question.id, deliverableId)} />
+                                    <div key={deliverableId} style={{ display: 'flex', alignItems: 'center' }}>
+                                        <span>
+                                            {deliverables.find(d => d.id === deliverableId)?.label}
+                                        </span>
+                                        {/* Replace remove button with an icon */}
+                                        <Icon
+                                            iconName='Delete'
+                                            ariaLabel="Remove"
+                                            onClick={() => removeDeliverableLink(question.id, deliverableId)}
+                                            style={{ marginLeft: '8px', cursor: 'pointer', color: '#ff0000' }}
+                                        />
                                     </div>
                                 ))}
                             </div>
