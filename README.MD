@@ -1,6 +1,6 @@
-# Azure DevOps Extension: Questionnaire Form
+# Azure DevOps Extension: Questionary Form
 
-This project is an Azure DevOps extension that provides a questionnaire form for work items. It enables users to answer a series of questions specific to each work item and store the responses directly in a custom field of the work item.
+This project is an Azure DevOps extension that provides a questionary form for work items. It enables users to answer a series of questions specific to each work items and store the responses directly in a custom field of the work item.
 
 https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatureAddon.feature-livrable-extension&targetId=9ed4a67e-0bf4-48ce-9276-8750bc557cd4&utm_source=vstsproduct&utm_medium=ExtHubManageList
 
@@ -8,7 +8,7 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
 ## Features
 
 - Load predefined questions from Azure DevOps Extension Data Service.
-- Allow (Developers/IT Sec etc) to provide answers and optional links related to each  question.
+- Allow (Developers/IT Sec etc) to provide answers and optional links related to each questions.
 - Store responses in a custom field associated with the work item.
 - Ensure persistence and consistency of responses across sessions.
 
@@ -23,8 +23,7 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
 1. **Clone the Repository:**
 
    ```bash
-   git clone https://github.com/your-username/azure-devops-extension-questionnaire.git
-   cd azure-devops-extension-questionnaire
+   git clone https://github.com/2fou/AZDO_plugins.git
    ```
 
 2. **Install Dependencies:**
@@ -149,13 +148,11 @@ Contributions are welcome! Please feel free to submit a Pull Request or report a
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](https://en.wikipedia.org/wiki/MIT_License) file for details.
 
 ## Acknowledgments
 
 - [Azure DevOps SDK](https://learn.microsoft.com/en-us/javascript/api/overview/azure/devops)
 - [React](https://reactjs.org/)
 - [Azure DevOps UI](https://github.com/microsoft/azure-devops-ui)
-
-## Some ScreenShot
 

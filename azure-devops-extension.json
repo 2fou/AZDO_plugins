@@ -3,8 +3,8 @@
     "id": "feature-livrable-extension",
     "publisher": "AgileCoachingSolutionsFeatureAddon",
 
-    "name": "Feature Livrable Control",
-    "description": "Controle pour les features avec livrables",
+    "name": "Epics &b Features with Deliverables check",
+    "description": "This extension adds a new tab to the work item form that shows the deliverables associated with the work item.",
     "public": false,
     "categories": [
         "Azure Boards"
