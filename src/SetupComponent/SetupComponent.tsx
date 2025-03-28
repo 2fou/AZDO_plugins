@@ -45,10 +45,10 @@ const SetupComponent: React.FC = () => {
                 const savedConfig = await dataManager.getValue<Config>('workItemConfig');
 
                 if (savedConfig) {
+                    // Ensure no undefined references
                     if (!savedConfig.workItemTypes) {
                         savedConfig.workItemTypes = {
                             epic: 'Epic',
-                            
                             feature: 'Feature',
                             story: 'Product Backlog Item',
                             task: 'Task'
@@ -134,28 +134,67 @@ const SetupComponent: React.FC = () => {
         setConfig({ ...config, stories: newStories });
     };
 
+    // Helpers to update work item type names
+    const updateWorkItemType = (field: keyof WorkItemTypesConfig, value: string) => {
+        setConfig({
+            ...config,
+            workItemTypes: {
+                ...config.workItemTypes,
+                [field]: value
+            }
+        });
+    };
+
     return (
         <div style={{ padding: '10px' }}>
             <h2>Work Item Configuration</h2>
             {error && <div className="error">{error}</div>}
 
+            {/* Edit the names of each work item type */}
             <div style={{ marginLeft: '20px', marginTop: '10px', paddingBottom: '10px', borderBottom: '1px solid #ccc' }}>
+                <h3>Work Item Types</h3>
+                <div>
+                    <TextField
+                        label="Epic Type Name"
+                        value={config.workItemTypes.epic}
+                        onChange={(e, val) => updateWorkItemType('epic', val || '')}
+                    />
+                    <TextField
+                        label="Feature Type Name"
+                        value={config.workItemTypes.feature}
+                        onChange={(e, val) => updateWorkItemType('feature', val || '')}
+                    />
+                    <TextField
+                        label="Story Type Name"
+                        value={config.workItemTypes.story}
+                        onChange={(e, val) => updateWorkItemType('story', val || '')}
+                    />
+                    <TextField
+                        label="Task Type Name"
+                        value={config.workItemTypes.task}
+                        onChange={(e, val) => updateWorkItemType('task', val || '')}
+                    />
+                </div>
+            </div>
+
+            {/* Feature section */}
+            <div style={{ marginLeft: '20px', marginTop: '20px', paddingBottom: '10px', borderBottom: '1px solid #ccc' }}>
                 <strong>{config.workItemTypes.epic}</strong>
                 <div style={{ marginLeft: '20px' }}>
                     <TextField
                         value={config.featureTitle}
                         onChange={(e, val) => setConfig({ ...config, featureTitle: val || '' })}
-                        placeholder="Feature Title"
+                        placeholder={`Enter a ${config.workItemTypes.feature} title`}
                     />
 
-                    <Button text="Add Story" onClick={addStory} />
+                    <Button text={`Add ${config.workItemTypes.story}`} onClick={addStory} />
 
                     {config.stories.map((story, storyIndex) => (
                         <div key={`story-${storyIndex}`} style={{ marginLeft: '20px', marginTop: '10px' }}>
                             <TextField
                                 value={story.title}
                                 onChange={(e, val) => updateStoryTitle(storyIndex, val || '')}
-                                placeholder={`Story ${storyIndex + 1} Title`}
+                                placeholder={`${config.workItemTypes.story} ${storyIndex + 1} Title`}
                             />
 
                             {story.tasks.map((task, taskIndex) => (
@@ -163,13 +202,13 @@ const SetupComponent: React.FC = () => {
                                     <TextField
                                         value={task}
                                         onChange={(e, val) => updateTask(storyIndex, taskIndex, val || '')}
-                                        placeholder={`Task ${taskIndex + 1}`}
+                                        placeholder={`${config.workItemTypes.task} ${taskIndex + 1}`}
                                     />
                                 </div>
                             ))}
 
                             <Button
-                                text="Add Task"
+                                text={`Add ${config.workItemTypes.task}`}
                                 onClick={() => addTask(storyIndex)}
                                 style={{ marginLeft: '20px' }}
                             />
@@ -184,7 +223,6 @@ const SetupComponent: React.FC = () => {
                 primary={true}
                 style={{ marginTop: '20px' }}
             />
-
             <Button
                 text="Clear Configuration"
                 onClick={clearConfig}

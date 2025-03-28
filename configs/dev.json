@@ -1,8 +1,11 @@
 {
   "baseUri": "https://localhost:3000",
-  "id": "feature-livrable-extension",
+  "id": "feature-livrable-extension-dev",
   "public": false,
-  "version": "1.0.240",
+  "version": "1.0.5",
+  "galleryFlags": [
+    "Preview"
+  ],
   "contributions": [
     {
       "id": "role-configuration",

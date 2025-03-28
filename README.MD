@@ -92,8 +92,13 @@ https://marketplace.visualstudio.com/items?itemName=AgileCoachingSolutionsFeatur
         ![Export](/dist/ScreenShot/AssignDeliverables.png)
 
 - Set the contribution "work item setup"
+- The previous version was only working in process "Agile" but since a "Story" is a Product Backlog Item in "Scrum" Process I have simply proposed to set the name of the workItem accordingly to the process used by the organisation
         <img src="/src/ScreenShot/image-6.png" alt="Workitem Setup" /> 
         ![Export](/dist/ScreenShot/image-6.png)
+- The new version will propose another setup
+        <img src="/src/ScreenShot/Work-Item-Setup-AgilePM.png" alt="Workitem Setup" /> 
+        ![Export](/dist/ScreenShot/Work-Item-Setup-AgilePM.png)
+
 - Role & responsability
         <img src="/src/ScreenShot/image-7.png" alt="Role Setup" /> 
         ![Export](/dist/ScreenShot/image-7.png)
